@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.prod
+
+# Database
+*.db
+*.db-journal
+
+# Logs
+logs/
+*.log
+
+# Config (keep examples)
+config/config.yaml
+!config/config.yaml.example
+
+# Data
+data/
+!data/.gitkeep
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# NapCat and downloads
+napcat/
+napcat_download/
+llonebot_download/
+
+# Temporary and local files
+*.tmp
+*.bak
+*.zip
+restore_qq.bat
+FINAL_SETUP.txt
+NAPCAT_INFO.txt
+test_config.py
+
+# QQ executable (too large for GitHub)
+QQ.exe
