@@ -1,29 +1,28 @@
-"""关键词触发器"""
-from typing import Optional
+"""名字触发器 - 当有人提到舟舟/沉舟时主动回复"""
 from nonebot import on_message
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message
 
 from src.utils.config import get_config
 from src.utils.logger import get_logger
-from src.utils.helpers import contains_keyword, is_at_bot, remove_at
+from src.utils.helpers import is_at_bot, remove_at
 from src.ai.client import get_ai_client
 from src.memory.context import get_context_manager
 from src.utils.web_search import get_web_search_client
 
-logger = get_logger("keyword")
+logger = get_logger("name")
 config = get_config()
 ai_client = get_ai_client()
 context_manager = get_context_manager()
 web_search_client = get_web_search_client()
 
-# 关键词触发器（优先级低于@触发）
-keyword_matcher = on_message(priority=10, block=False)
+# 名字触发器（优先级高于关键词，低于@触发）
+name_matcher = on_message(priority=8, block=False)
 
-@keyword_matcher.handle()
-async def handle_keyword(bot: Bot, event: GroupMessageEvent):
-    """处理关键词触发"""
+@name_matcher.handle()
+async def handle_name_mention(bot: Bot, event: GroupMessageEvent):
+    """处理名字提及"""
     # 检查功能是否开启
-    if not config.get("features.keyword_reply", True):
+    if not config.get("features.name_reply", True):
         return
     
     # 检查是否是目标群
@@ -42,12 +41,16 @@ async def handle_keyword(bot: Bot, event: GroupMessageEvent):
     if not message_text:
         return
     
-    # 检查是否包含关键词
-    keywords = config.keywords
-    if not contains_keyword(message_text, keywords):
+    # 获取配置的名字和昵称
+    personality = config.get("personality", {})
+    name = personality.get("name", "沉舟")
+    nickname = personality.get("nickname", "舟舟")
+    
+    # 检查是否提到了名字或昵称
+    if name not in message_text and nickname not in message_text:
         return
     
-    logger.info(f"[群] 关键词触发: {message_text}")
+    logger.info(f"[群] 名字触发: {message_text}")
     
     # 检查是否需要联网搜索
     search_context = None
@@ -69,6 +72,6 @@ async def handle_keyword(bot: Bot, event: GroupMessageEvent):
     reply = ai_client.chat(context, search_context=search_context, chat_type="group", sender_qq=sender_qq)
     
     if reply:
-        await keyword_matcher.send(Message(reply))
+        await name_matcher.send(Message(reply))
         context_manager.add_message("group", "assistant", reply)
-        logger.info(f"[群] 关键词回复: {reply}")
+        logger.info(f"[群] 名字回复: {reply}")

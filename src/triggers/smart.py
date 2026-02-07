@@ -10,11 +10,13 @@ from src.utils.helpers import is_at_bot, remove_at, contains_keyword
 from src.ai.client import get_ai_client
 from src.ai.prompts import get_smart_reply_prompt
 from src.memory.context import get_context_manager
+from src.utils.web_search import get_web_search_client
 
 logger = get_logger("smart")
 config = get_config()
 ai_client = get_ai_client()
 context_manager = get_context_manager()
+web_search_client = get_web_search_client()
 
 # 记录上次触发时间
 last_trigger_time = 0
@@ -51,12 +53,12 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent):
         return
     
     # 检查触发概率
-    trigger_rate = config.get("smart_reply.trigger_rate", 0.3)
+    trigger_rate = config.get("smart_reply.trigger_rate", 0.5)
     if random.random() > trigger_rate:
         return
     
     # 检查最小间隔
-    min_interval = config.get("smart_reply.min_interval", 60)
+    min_interval = config.get("smart_reply.min_interval", 30)
     current_time = time.time()
     if current_time - last_trigger_time < min_interval:
         return
@@ -76,15 +78,24 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent):
     # 更新触发时间
     last_trigger_time = current_time
     
+    # 检查是否需要联网搜索
+    search_context = None
+    if web_search_client.should_search(message_text):
+        logger.info(f"[群] 触发联网搜索")
+        search_context = web_search_client.search(message_text)
+        if search_context:
+            logger.info(f"[群] 搜索结果: {search_context[:100]}...")
+    
     # 获取发送者信息
     sender_name = event.sender.card or event.sender.nickname
+    sender_qq = str(event.user_id)
     
     # 添加用户消息到上下文
     context_manager.add_message("group", "user", message_text, sender_name)
     
     # 获取上下文并调用AI
     context = context_manager.format_for_ai("group")
-    reply = ai_client.chat(context)
+    reply = ai_client.chat(context, search_context=search_context, chat_type="group", sender_qq=sender_qq)
     
     if reply:
         await smart_matcher.send(Message(reply))

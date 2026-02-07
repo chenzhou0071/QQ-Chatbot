@@ -40,11 +40,25 @@ class AIClient:
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         logger.info(f"AI客户端初始化完成: {self.provider}")
     
-    def chat(self, messages: List[Dict], temperature: float = 0.7) -> Optional[str]:
-        """发送聊天请求"""
+    def chat(self, messages: List[Dict], temperature: float = 0.7, search_context: Optional[str] = None, chat_type: str = "group", sender_qq: str = None) -> Optional[str]:
+        """发送聊天请求
+        
+        Args:
+            messages: 对话消息列表
+            temperature: 温度参数
+            search_context: 联网搜索的上下文信息
+            chat_type: 聊天类型，"group" 为群聊，"private" 为私聊
+            sender_qq: 发送者的 QQ 号，用于识别管理员
+        """
         # 添加系统提示词
+        system_prompt = get_system_prompt(chat_type, sender_qq)
+        
+        # 如果有搜索上下文，添加到系统提示词中
+        if search_context:
+            system_prompt += f"\n\n【实时信息】\n以下是联网搜索获取的实时信息，请基于这些信息回答，但保持你的人设和语气：\n{search_context}"
+        
         full_messages = [
-            {"role": "system", "content": get_system_prompt()}
+            {"role": "system", "content": system_prompt}
         ] + messages
         
         # 重试机制
