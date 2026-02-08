@@ -17,8 +17,7 @@
 
 - Windows 10/11
 - Python 3.9+
-- NTQQ客户端
-- NapCat
+- NapCat（从 https://napneko.github.io/ 下载 Shell 版本）
 
 ### 2. 安装步骤
 

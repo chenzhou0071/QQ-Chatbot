@@ -10,10 +10,12 @@
 
 ### 2. 安装NapCat
 
-1. 访问 https://github.com/NapNeko/NapCatQQ
-2. 下载最新版本的NapCat
-3. 按照官方文档安装NapCat作为NTQQ插件
-4. 配置NapCat的WebSocket服务（默认端口3001）
+1. 访问 NapCat 官网：https://napneko.github.io/
+2. 下载 **NapCat.Shell.Windows.Node.zip**（Windows Shell 版本）
+3. 解压到项目的 `napcat` 目录
+4. 运行 `napcat.bat` 启动 NapCat
+5. 首次启动需要扫码登录机器人QQ账号
+6. 配置 WebSocket 服务（默认端口 3001）
 
 ### 3. 安装Python环境
 

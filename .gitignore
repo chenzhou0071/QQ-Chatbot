@@ -67,6 +67,7 @@ llonebot_download/
 restore_qq.bat
 FINAL_SETUP.txt
 NAPCAT_INFO.txt
+ONEKEY_QUICKSTART.txt
 test_config.py
 
 # QQ executable (too large for GitHub)
