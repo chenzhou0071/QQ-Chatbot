@@ -73,6 +73,27 @@ class Database:
                 )
             """)
             
+            # 群友信息表
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS group_member (
+                    qq_id TEXT PRIMARY KEY,
+                    qq_name TEXT,
+                    group_card TEXT,
+                    nickname TEXT,
+                    nickname_confirmed INTEGER DEFAULT 0,
+                    birthday TEXT,
+                    remark TEXT,
+                    avatar_url TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    first_seen DATETIME,
+                    last_active DATETIME,
+                    leave_time DATETIME,
+                    message_count INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
             # 创建索引
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_chat_log_sender 
@@ -85,6 +106,14 @@ class Database:
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_chat_log_created 
                 ON chat_log(created_at)
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_group_member_active 
+                ON group_member(is_active)
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_group_member_birthday 
+                ON group_member(birthday)
             """)
             
             logger.info("数据库初始化完成")

@@ -43,6 +43,7 @@ features:
   smart_reply: true               # 智能判断回复
   auto_chat: true                 # 主动聊天
   chat_log: true                  # 是否记录聊天日志
+  bilibili_parse: true            # B站链接解析
 
 # 关键词列表
 keywords:
@@ -53,6 +54,15 @@ keywords:
   - "新闻"
   - "早安"
   - "晚安"
+  - "帮助"
+  - "功能"
+  - "/help"
+
+# 关键词固定回复（不调用AI）
+keyword_fixed_replies:
+  "帮助": "嗯...我可以做这些：\n• @我 聊天\n• 提到我的名字（舟舟/沉舟）\n• 说关键词（天气、时间、笑话等）\n• 我会智能判断要不要回复\n• 每天早晚会问候大家"
+  "功能": "那个...我的功能有：\n• 智能聊天（记得历史对话）\n• 联网搜索（实时信息）\n• 定时问候（早安/晚安）\n• 语义记忆（能想起以前的事）\n如果想了解更多...可以@我问"
+  "/help": "嗯...我可以做这些：\n• @我 聊天\n• 提到我的名字（舟舟/沉舟）\n• 说关键词（天气、时间、笑话等）\n• 我会智能判断要不要回复\n• 每天早晚会问候大家"
 
 # 智能判断配置
 smart_reply:
@@ -91,5 +101,38 @@ auto_chat:
 
 # 对话配置
 conversation:
-  max_messages: 20                # 最大消息数量
+  max_messages: 30                # 最大消息数量（增加到30条）
   timeout_minutes: 30             # 超时时间(分钟)
+  cache_size: 10                  # 内存缓存会话数量
+
+# 记忆配置
+memory:
+  vector_db:
+    enabled: true                 # 是否启用向量数据库
+    persist_dir: "data/chroma"    # 向量库存储路径
+    search_results: 5             # 搜索返回结果数（建议3-10）
+
+# B站解析配置
+bilibili:
+  show_image: true                # 是否显示封面图
+  show_stats: true                # 是否显示数据统计
+
+
+# 群友管理配置
+member_management:
+  auto_collect: true              # 自动收集群友信息
+  birthday_reminder: true         # 生日提醒功能
+  reminder_time: "09:00"          # 提醒时间
+  leave_notification: true        # 退群通知
+  save_avatar: true               # 保存头像
+
+# 内容过滤配置
+content_filter:
+  enabled: true                   # 是否启用内容过滤
+  sensitive_words:                # 敏感词列表（支持模糊匹配）
+    - "政治"
+    - "暴力"
+    - "色情"
+    # 可以添加更多敏感词
+  warning_message: "（小声）这个话题...我不太想聊"  # 检测到敏感词时的回复
+  log_violations: true            # 是否记录违规日志

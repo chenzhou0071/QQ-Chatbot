@@ -6,7 +6,7 @@ echo ========================================
 echo.
 
 echo [1/2] 启动机器人...
-start "QQ机器人" cmd /k "cd /d %~dp0 && venv\Scripts\activate && python src/bot.py"
+start "QQ机器人" cmd /k "cd /d %~dp0 && start_bot.bat"
 timeout /t 3 /nobreak >nul
 
 echo [2/2] 启动 NapCat...

@@ -7,14 +7,16 @@ from src.utils.config import get_config
 from src.utils.logger import get_logger
 from src.utils.helpers import is_at_bot, remove_at, contains_keyword
 from src.ai.client import get_ai_client
-from src.memory.context import get_context_manager
+from src.memory.memory_manager import get_memory_manager
 from src.utils.web_search import get_web_search_client
+from src.utils.content_filter import get_content_filter
 
 logger = get_logger("chat_handler")
 config = get_config()
 ai_client = get_ai_client()
-context_manager = get_context_manager()
+memory_manager = get_memory_manager()
 web_search_client = get_web_search_client()
+content_filter = get_content_filter()
 
 # @触发回复
 mention_matcher = on_message(rule=to_me(), priority=5, block=True)
@@ -48,6 +50,15 @@ async def handle_mention(bot: Bot, event: GroupMessageEvent | PrivateMessageEven
     
     logger.info(f"[{chat_type}] 收到@消息: {sender_name}: {message_text}")
     
+    # 内容过滤检查
+    if config.get("content_filter.enabled", True):
+        should_ignore, reason = content_filter.should_ignore_message(message_text)
+        if should_ignore:
+            warning_msg = content_filter.get_warning_message()
+            await mention_matcher.send(Message(warning_msg))
+            logger.warning(f"[{chat_type}] 消息被过滤: {reason}")
+            return
+    
     # 检查是否需要联网搜索
     search_context = None
     if web_search_client.should_search(message_text):
@@ -56,18 +67,28 @@ async def handle_mention(bot: Bot, event: GroupMessageEvent | PrivateMessageEven
         if search_context:
             logger.info(f"[{chat_type}] 搜索结果: {search_context[:100]}...")
     
-    # 添加用户消息到上下文
-    context_manager.add_message(chat_type, "user", message_text, sender_name)
+    # 添加用户消息到记忆系统（三层存储）
+    memory_manager.add_message(
+        chat_type=chat_type,
+        role="user",
+        content=message_text,
+        sender_id=sender_qq,
+        sender_name=sender_name
+    )
     
-    # 获取上下文并调用AI（传入 chat_type 和 sender_qq）
-    context = context_manager.format_for_ai(chat_type)
+    # 获取上下文（包含相关记忆）
+    context = memory_manager.get_context_for_ai(chat_type, message_text)
     reply = ai_client.chat(context, search_context=search_context, chat_type=chat_type, sender_qq=sender_qq)
     
     if reply:
         # 发送回复
         await mention_matcher.send(Message(reply))
         
-        # 添加机器人回复到上下文
-        context_manager.add_message(chat_type, "assistant", reply)
+        # 添加机器人回复到记忆系统
+        memory_manager.add_message(
+            chat_type=chat_type,
+            role="assistant",
+            content=reply
+        )
         
         logger.info(f"[{chat_type}] AI回复: {reply}")
