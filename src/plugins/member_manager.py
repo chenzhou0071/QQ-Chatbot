@@ -162,7 +162,7 @@ async def handle_member_leave(bot: Bot, event: NoticeEvent):
 
 
 # 命令：设置生日
-set_birthday_cmd = on_command("生日", permission=SUPERUSER, priority=5, block=True)
+set_birthday_cmd = on_command("生日", permission=SUPERUSER, priority=1, block=True)
 
 @set_birthday_cmd.handle()
 async def set_birthday(bot: Bot, event, args: Message = CommandArg()):
@@ -216,7 +216,7 @@ async def set_birthday(bot: Bot, event, args: Message = CommandArg()):
 
 
 # 命令：设置备注
-set_remark_cmd = on_command("备注", permission=SUPERUSER, priority=5, block=True)
+set_remark_cmd = on_command("备注", permission=SUPERUSER, priority=1, block=True)
 
 @set_remark_cmd.handle()
 async def set_remark(bot: Bot, event, args: Message = CommandArg()):
@@ -247,7 +247,7 @@ async def set_remark(bot: Bot, event, args: Message = CommandArg()):
 
 
 # 命令：查询群友信息
-query_member_cmd = on_command("查询", priority=5, block=True)
+query_member_cmd = on_command("查询", priority=1, block=True)
 
 @query_member_cmd.handle()
 async def query_member(bot: Bot, event, args: Message = CommandArg()):
@@ -334,7 +334,7 @@ async def query_member(bot: Bot, event, args: Message = CommandArg()):
 
 
 # 命令：设置昵称
-set_nickname_cmd = on_command("昵称", permission=SUPERUSER, priority=5, block=True)
+set_nickname_cmd = on_command("昵称", permission=SUPERUSER, priority=1, block=True)
 
 @set_nickname_cmd.handle()
 async def set_nickname(bot: Bot, event, args: Message = CommandArg()):
@@ -375,7 +375,7 @@ async def set_nickname(bot: Bot, event, args: Message = CommandArg()):
 
 
 # 命令：统计
-stats_cmd = on_command("统计", priority=5, block=True)
+stats_cmd = on_command("统计", priority=1, block=True)
 
 @stats_cmd.handle()
 async def show_stats(bot: Bot, event):
@@ -404,7 +404,7 @@ logger.info("群友管理插件已加载")
 
 
 # 测试命令：模拟退群通知
-test_leave_cmd = on_command("测试退群", permission=SUPERUSER, priority=5, block=True)
+test_leave_cmd = on_command("测试退群", permission=SUPERUSER, priority=1, block=True)
 
 @test_leave_cmd.handle()
 async def test_leave_notification(bot: Bot, event, args: Message = CommandArg()):

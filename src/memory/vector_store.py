@@ -19,7 +19,7 @@ class VectorStore:
         self.config = get_config()
         
         # 阿里云API配置
-        self.api_key = self.config.dashscope_api_key
+        self.api_key = self.config.get_env("DASHSCOPE_API_KEY")
         self.embedding_url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
         
         # 创建持久化目录

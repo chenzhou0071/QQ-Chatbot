@@ -111,11 +111,19 @@ memory:
     enabled: true                 # 是否启用向量数据库
     persist_dir: "data/chroma"    # 向量库存储路径
     search_results: 5             # 搜索返回结果数（建议3-10）
+    similarity_threshold: 0.5     # 相似度阈值（距离小于此值才认为相关，建议0.3-0.7）
 
 # B站解析配置
 bilibili:
   show_image: true                # 是否显示封面图
   show_stats: true                # 是否显示数据统计
+
+# AI 客户端配置
+ai:
+  max_retries: 3                  # 最大重试次数
+  retry_delays: [1, 3, 5]         # 重试延迟（秒）
+  temperature: 0.7                # 温度参数（0.0-1.0，越高越随机）
+  max_tokens: 500                 # 最大token数
 
 
 # 群友管理配置
@@ -136,3 +144,60 @@ content_filter:
     # 可以添加更多敏感词
   warning_message: "（小声）这个话题...我不太想聊"  # 检测到敏感词时的回复
   log_violations: true            # 是否记录违规日志
+
+# 对话智能模块配置
+dialogue_intelligence:
+  # 意图分析
+  intent:
+    enabled: true
+    counter_question:
+      enabled: true
+      stack_size: 3               # 保留最近几个问题
+    sarcasm_detection:
+      enabled: true
+      threshold: 0.6              # 置信度阈值（0.0-1.0）
+      use_ai_verification: false  # 使用AI二次确认（暂不启用）
+    topic_tracking:
+      enabled: true
+      switch_threshold: 3         # 几条不相关消息后切换话题
+    contradiction_detection:
+      enabled: false              # 矛盾检测（暂不启用）
+      similarity_threshold: 0.7
+  
+  # 对话状态机
+  state_machine:
+    enabled: true                 # 是否启用状态机
+    state_prompts: true           # 是否根据状态调整prompt
+    opening_threshold: 2          # 开启状态需要几条消息
+    closing_timeout: 300          # 多久无消息进入结束状态（秒）
+  
+  # 主动对话
+  proactive:
+    enabled: true                 # 是否启用主动对话
+    check_interval: 60            # 检查间隔（秒）
+    
+    # 冷场检测
+    cold_detection:
+      enabled: true
+      thresholds:
+        mild: 300                 # 5分钟
+        moderate: 600             # 10分钟
+        severe: 1200              # 20分钟
+      probabilities:
+        mild: 0.2                 # 轻度冷场主动概率
+        moderate: 0.5             # 中度冷场主动概率
+        severe: 0.8               # 重度冷场主动概率
+    
+    # 话题生成
+    topic_generation:
+      enabled: true
+      recent_exclusion_hours: 24  # 排除最近N小时讨论过的话题
+    
+    # 插话判断
+    interject:
+      enabled: true
+      cooldown: 600               # 冷却时间（秒）
+      max_recent_messages: 3      # 最近1小时最多主动几次
+      when_mentioned: 0.8         # 被提到时的插话概率
+      when_relevant: 0.4          # 话题相关时的插话概率
+      when_cold: 0.6              # 冷场时的插话概率

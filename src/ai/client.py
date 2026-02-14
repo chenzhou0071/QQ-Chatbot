@@ -9,19 +9,24 @@ from src.ai.prompts import get_system_prompt
 
 logger = get_logger("ai")
 
+
 class AIClient:
     """AI客户端（支持DeepSeek和通义千问）"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = get_config()
-        self.provider = self.config.get_env("AI_PROVIDER", "deepseek")
-        self.max_retries = 3
-        self.retry_delays = [1, 3, 5]  # 递增延迟
+        self.provider: str = self.config.get_env("AI_PROVIDER", "deepseek")
+        
+        # 从配置文件读取参数
+        self.max_retries: int = self.config.get("ai.max_retries", 3)
+        self.retry_delays: List[int] = self.config.get("ai.retry_delays", [1, 3, 5])
+        self.default_temperature: float = self.config.get("ai.temperature", 0.7)
+        self.max_tokens: int = self.config.get("ai.max_tokens", 500)
         
         # 初始化客户端
         self._init_client()
     
-    def _init_client(self):
+    def _init_client(self) -> None:
         """初始化OpenAI客户端"""
         if self.provider == "deepseek":
             api_key = self.config.get_env("DEEPSEEK_API_KEY")
@@ -40,16 +45,28 @@ class AIClient:
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         logger.info(f"AI客户端初始化完成: {self.provider}")
     
-    def chat(self, messages: List[Dict], temperature: float = 0.7, search_context: Optional[str] = None, chat_type: str = "group", sender_qq: str = None) -> Optional[str]:
+    def chat(self, 
+             messages: List[Dict[str, str]], 
+             temperature: Optional[float] = None, 
+             search_context: Optional[str] = None, 
+             chat_type: str = "group", 
+             sender_qq: Optional[str] = None) -> Optional[str]:
         """发送聊天请求
         
         Args:
             messages: 对话消息列表
-            temperature: 温度参数
+            temperature: 温度参数，None则使用默认值
             search_context: 联网搜索的上下文信息
             chat_type: 聊天类型，"group" 为群聊，"private" 为私聊
             sender_qq: 发送者的 QQ 号，用于识别管理员
+            
+        Returns:
+            AI回复内容，失败返回None
         """
+        # 使用默认温度
+        if temperature is None:
+            temperature = self.default_temperature
+        
         # 添加系统提示词
         system_prompt = get_system_prompt(chat_type, sender_qq)
         
@@ -68,11 +85,11 @@ class AIClient:
                     model=self.model,
                     messages=full_messages,
                     temperature=temperature,
-                    max_tokens=500
+                    max_tokens=self.max_tokens
                 )
                 
                 reply = response.choices[0].message.content.strip()
-                logger.info(f"AI回复成功: {reply[:50]}...")
+                logger.debug(f"AI回复成功: {reply[:50]}...")
                 return reply
                 
             except Exception as e:
@@ -80,7 +97,7 @@ class AIClient:
                 
                 if attempt < self.max_retries - 1:
                     delay = self.retry_delays[attempt]
-                    logger.info(f"等待 {delay} 秒后重试...")
+                    logger.debug(f"等待 {delay} 秒后重试...")
                     time.sleep(delay)
                 else:
                     logger.error("AI调用连续失败，降级回复")
@@ -89,7 +106,11 @@ class AIClient:
         return None
     
     def _fallback_reply(self) -> str:
-        """降级回复"""
+        """降级回复
+        
+        Returns:
+            降级回复消息
+        """
         fallback_messages = [
             "抱歉，我现在有点累了，稍后再聊吧~",
             "emmm...我需要休息一下",
@@ -99,16 +120,28 @@ class AIClient:
         return random.choice(fallback_messages)
     
     def simple_chat(self, message: str) -> Optional[str]:
-        """简单对话（无上下文）"""
+        """简单对话（无上下文）
+        
+        Args:
+            message: 用户消息
+            
+        Returns:
+            AI回复内容
+        """
         messages = [{"role": "user", "content": message}]
         return self.chat(messages)
 
 
 # 全局AI客户端实例
-_ai_client = None
+_ai_client: Optional[AIClient] = None
+
 
 def get_ai_client() -> AIClient:
-    """获取AI客户端实例"""
+    """获取AI客户端实例
+    
+    Returns:
+        AIClient实例
+    """
     global _ai_client
     if _ai_client is None:
         _ai_client = AIClient()

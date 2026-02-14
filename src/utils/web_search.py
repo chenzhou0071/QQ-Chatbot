@@ -107,7 +107,7 @@ class WebSearchClient:
         if not self.enabled:
             return False
         
-        # 需要联网搜索的关键词
+        # 1. 先检查明确的关键词（快速判断）
         search_keywords = [
             "天气", "气温", "温度", "下雨", "晴天", "阴天",
             "时间", "几点", "现在", "日期", "星期",
@@ -117,7 +117,85 @@ class WebSearchClient:
             "汇率", "美元", "人民币"
         ]
         
-        return any(keyword in message for keyword in search_keywords)
+        if any(keyword in message for keyword in search_keywords):
+            logger.debug(f"关键词匹配，触发搜索: {message[:30]}...")
+            return True
+        
+        # 2. 使用AI智能判断是否需要实时信息
+        return self._ai_should_search(message)
+    
+    def _ai_should_search(self, message: str) -> bool:
+        """使用AI判断是否需要联网搜索"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            prompt = f"""判断以下问题是否需要联网搜索获取实时信息。
+
+需要联网搜索的情况：
+1. 询问最新版本、最新消息、最新动态
+2. 询问当前价格、实时数据
+3. 询问今天/最近发生的事件
+4. 询问需要时效性的信息（如天气、时间、新闻）
+5. 询问最新的技术、产品、游戏更新
+6. 询问"现在"、"目前"、"最新"相关的问题
+
+不需要联网搜索的情况：
+1. 闲聊、打招呼
+2. 询问概念、原理、历史知识
+3. 请求写作、翻译等创作任务
+4. 个人情感、意见类问题
+
+问题："{message}"
+
+请只回复：
+- 需要搜索：YES
+- 不需要搜索：NO
+
+不要有任何其他内容。"""
+
+            payload = {
+                "model": "qwen-plus",
+                "input": {
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ]
+                },
+                "parameters": {
+                    "result_format": "message",
+                    "temperature": 0.3,
+                    "max_tokens": 10
+                }
+            }
+            
+            response = requests.post(
+                self.base_url,
+                headers=headers,
+                json=payload,
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if 'output' in result and 'choices' in result['output']:
+                    content = result['output']['choices'][0].get('message', {}).get('content', '').strip()
+                    
+                    if content == "YES":
+                        logger.info(f"AI判断需要搜索: {message[:30]}...")
+                        return True
+                    else:
+                        logger.debug(f"AI判断不需要搜索: {message[:30]}...")
+                        return False
+            
+            # 判断失败时，保守策略：不搜索
+            return False
+            
+        except Exception as e:
+            logger.debug(f"AI判断搜索失败: {e}")
+            # 失败时不搜索，避免过度调用
+            return False
 
 
 # 全局实例

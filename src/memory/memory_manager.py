@@ -11,16 +11,17 @@ from src.utils.config import get_config
 
 logger = get_logger("memory_manager")
 
+
 class MemoryManager:
     """统一记忆管理器（三层记忆系统）"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = get_config()
         self.context_manager = get_context_manager()
         self.db = get_database()
         
         # 向量库（可选）
-        self.vector_enabled = self.config.get("memory.vector_db.enabled", True)
+        self.vector_enabled: bool = self.config.get("memory.vector_db.enabled", True)
         if self.vector_enabled:
             try:
                 self.vector_store = get_vector_store()
@@ -36,8 +37,16 @@ class MemoryManager:
                     role: str,
                     content: str,
                     sender_id: str = "",
-                    sender_name: str = ""):
-        """添加消息（三层存储）"""
+                    sender_name: str = "") -> None:
+        """添加消息（三层存储）
+        
+        Args:
+            chat_type: 聊天类型（group/private）
+            role: 角色（user/assistant）
+            content: 消息内容
+            sender_id: 发送者ID
+            sender_name: 发送者名称
+        """
         timestamp = datetime.now()
         
         # 1. 短期记忆（内存缓存）
@@ -50,8 +59,23 @@ class MemoryManager:
         if self.vector_enabled and role == "user" and content.strip():
             self._save_to_vector(chat_type, sender_id, sender_name, content, timestamp)
     
-    def _save_to_database(self, chat_type, sender_id, sender_name, content, role, timestamp):
-        """保存到SQLite"""
+    def _save_to_database(self, 
+                         chat_type: str, 
+                         sender_id: str, 
+                         sender_name: str, 
+                         content: str, 
+                         role: str, 
+                         timestamp: datetime) -> None:
+        """保存到SQLite
+        
+        Args:
+            chat_type: 聊天类型
+            sender_id: 发送者ID
+            sender_name: 发送者名称
+            content: 消息内容
+            role: 角色
+            timestamp: 时间戳
+        """
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
@@ -71,8 +95,21 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"保存到数据库失败: {e}")
     
-    def _save_to_vector(self, chat_type, sender_id, sender_name, content, timestamp):
-        """保存到向量库"""
+    def _save_to_vector(self, 
+                       chat_type: str, 
+                       sender_id: str, 
+                       sender_name: str, 
+                       content: str, 
+                       timestamp: datetime) -> None:
+        """保存到向量库
+        
+        Args:
+            chat_type: 聊天类型
+            sender_id: 发送者ID
+            sender_name: 发送者名称
+            content: 消息内容
+            timestamp: 时间戳
+        """
         try:
             # 生成唯一ID
             chat_id = hashlib.md5(
@@ -93,14 +130,26 @@ class MemoryManager:
     def search_related_memories(self, 
                                 query: str, 
                                 chat_type: str,
-                                n_results: int = None) -> str:
-        """搜索相关记忆并格式化"""
+                                n_results: Optional[int] = None) -> str:
+        """搜索相关记忆并格式化
+        
+        Args:
+            query: 查询文本
+            chat_type: 聊天类型
+            n_results: 返回结果数量
+            
+        Returns:
+            格式化的记忆文本
+        """
         if not self.vector_enabled:
             return ""
         
         # 从配置读取搜索结果数
         if n_results is None:
             n_results = self.config.get("memory.vector_db.search_results", 5)
+        
+        # 从配置读取相似度阈值
+        similarity_threshold: float = self.config.get("memory.vector_db.similarity_threshold", 0.5)
         
         try:
             memories = self.vector_store.search_memory(query, n_results, chat_type)
@@ -111,8 +160,8 @@ class MemoryManager:
             # 格式化为上下文
             context_parts = ["[相关记忆]"]
             for mem in memories:
-                # 只显示相似度高的记忆（距离小于0.5）
-                if mem['distance'] < 0.5:
+                # 只显示相似度高的记忆（距离小于阈值）
+                if mem['distance'] < similarity_threshold:
                     context_parts.append(
                         f"- {mem['sender_name']}: {mem['content']} ({mem['timestamp'][:10]})"
                     )
@@ -125,8 +174,16 @@ class MemoryManager:
             logger.error(f"搜索记忆失败: {e}")
             return ""
     
-    def get_context_for_ai(self, chat_type: str, current_query: str = "") -> List[Dict]:
-        """获取AI所需的完整上下文"""
+    def get_context_for_ai(self, chat_type: str, current_query: str = "") -> List[Dict[str, str]]:
+        """获取AI所需的完整上下文
+        
+        Args:
+            chat_type: 聊天类型
+            current_query: 当前查询
+            
+        Returns:
+            消息列表
+        """
         # 1. 获取短期记忆
         messages = self.context_manager.format_for_ai(chat_type)
         
@@ -139,12 +196,16 @@ class MemoryManager:
                     "role": "system",
                     "content": related_memories
                 })
-                logger.info(f"[{chat_type}] 注入相关记忆")
+                logger.debug(f"[{chat_type}] 注入相关记忆")
         
         return messages
     
-    def get_stats(self) -> Dict:
-        """获取记忆统计"""
+    def get_stats(self) -> Dict[str, any]:
+        """获取记忆统计
+        
+        Returns:
+            统计信息字典
+        """
         stats = {
             'short_term': self.context_manager.get_cache_stats(),
         }
@@ -156,10 +217,15 @@ class MemoryManager:
 
 
 # 全局实例
-_memory_manager = None
+_memory_manager: Optional[MemoryManager] = None
+
 
 def get_memory_manager() -> MemoryManager:
-    """获取记忆管理器实例"""
+    """获取记忆管理器实例
+    
+    Returns:
+        MemoryManager实例
+    """
     global _memory_manager
     if _memory_manager is None:
         _memory_manager = MemoryManager()
