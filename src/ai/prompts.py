@@ -38,8 +38,12 @@ def get_system_prompt(chat_type: str = "group", sender_qq: str = None) -> str:
                 # 如果有备注，添加到提示词
                 if member.get('remark'):
                     sender_info = f"\n【对话者信息】\n你正在和{sender_nickname or '对方'}对话。关于TA的信息：{member['remark']}\n"
-        except Exception:
-            pass  # 忽略错误，不影响正常对话
+        except KeyError as e:
+            logger.warning(f"群友信息字段缺失: {e}")
+        except AttributeError as e:
+            logger.error(f"群友数据库访问错误: {e}", exc_info=True)
+        except Exception as e:
+            logger.error(f"获取群友信息失败: {e}", exc_info=True)
     
     # 构建基础人设提示词
     prompt = f"""你是{name}（大家可以亲切地叫你{nickname}）。

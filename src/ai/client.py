@@ -91,16 +91,41 @@ class AIClient:
                 reply = response.choices[0].message.content.strip()
                 logger.debug(f"AI回复成功: {reply[:50]}...")
                 return reply
-                
-            except Exception as e:
-                logger.warning(f"AI调用失败 (尝试 {attempt + 1}/{self.max_retries}): {e}")
-                
+            
+            except ConnectionError as e:
+                logger.warning(f"AI连接失败 (尝试 {attempt + 1}/{self.max_retries}): {e}")
                 if attempt < self.max_retries - 1:
                     delay = self.retry_delays[attempt]
                     logger.debug(f"等待 {delay} 秒后重试...")
                     time.sleep(delay)
                 else:
-                    logger.error("AI调用连续失败，降级回复")
+                    logger.error("AI连接持续失败，降级回复")
+                    return self._fallback_reply()
+            
+            except TimeoutError as e:
+                logger.warning(f"AI请求超时 (尝试 {attempt + 1}/{self.max_retries}): {e}")
+                if attempt < self.max_retries - 1:
+                    delay = self.retry_delays[attempt]
+                    time.sleep(delay)
+                else:
+                    logger.error("AI请求持续超时，降级回复")
+                    return self._fallback_reply()
+            
+            except ValueError as e:
+                logger.error(f"AI请求参数错误: {e}", exc_info=True)
+                return self._fallback_reply()
+            
+            except KeyError as e:
+                logger.error(f"AI响应格式错误: {e}", exc_info=True)
+                return self._fallback_reply()
+                
+            except Exception as e:
+                logger.error(f"AI调用未知错误 (尝试 {attempt + 1}/{self.max_retries}): {e}", exc_info=True)
+                if attempt < self.max_retries - 1:
+                    delay = self.retry_delays[attempt]
+                    time.sleep(delay)
+                else:
+                    logger.critical("AI调用连续失败，降级回复")
                     return self._fallback_reply()
         
         return None

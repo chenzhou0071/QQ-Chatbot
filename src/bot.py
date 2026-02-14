@@ -10,6 +10,21 @@ sys.path.insert(0, str(project_root))
 import nonebot
 from nonebot.adapters.onebot.v11 import Adapter as OneBotV11Adapter
 
+# 验证配置
+from src.utils.config import get_config
+from src.utils.config_validator import validate_config, ConfigValidationError
+
+try:
+    config = get_config()
+    validate_config(config._config)  # 验证配置
+except ConfigValidationError as e:
+    print(f"\n❌ 配置验证失败:\n{e}\n")
+    print("请检查 config/config.yaml 和 config/.env 文件")
+    sys.exit(1)
+except Exception as e:
+    print(f"\n❌ 启动失败: {e}\n")
+    sys.exit(1)
+
 # 配置日志过滤器，隐藏 IgnoredException 的详细堆栈
 class IgnoreExceptionFilter(logging.Filter):
     def filter(self, record):
