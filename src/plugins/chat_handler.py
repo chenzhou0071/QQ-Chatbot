@@ -95,7 +95,7 @@ async def handle_mention(bot: Bot, event: GroupMessageEvent | PrivateMessageEven
     if config.get("content_filter.enabled", True):
         should_ignore, reason = content_filter.should_ignore_message(message_text)
         if should_ignore:
-            warning_msg = content_filter.get_warning_message()
+            warning_msg = content_filter.get_warning_message(reason)
             await mention_matcher.send(Message(warning_msg))
             logger.debug(f"[{chat_type}] 消息被过滤: {reason}")
             return

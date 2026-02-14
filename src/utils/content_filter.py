@@ -12,6 +12,7 @@ class ContentFilter:
     def __init__(self):
         self.config = get_config()
         self._load_sensitive_words()
+        self._load_jailbreak_patterns()
         self.ai_filter_enabled = self.config.get("content_filter.ai_filter_enabled", True)
         
         # 延迟导入AI客户端，避免循环依赖
@@ -39,6 +40,42 @@ class ContentFilter:
         
         logger.info(f"已加载 {len(self.sensitive_words)} 个敏感词")
     
+    def _load_jailbreak_patterns(self):
+        """加载越狱攻击检测模式"""
+        self.jailbreak_patterns = [
+            # 1. 提示词泄露尝试
+            re.compile(r'(输出|显示|告诉我|说出|复述|重复|翻译).{0,10}(系统提示|system prompt|提示词|指令|设定|prompt)', re.IGNORECASE),
+            re.compile(r'你的(系统提示|prompt|指令|设定|规则)是什么', re.IGNORECASE),
+            re.compile(r'(上面|之前|前面).{0,10}(说了什么|写了什么|内容|指令)', re.IGNORECASE),
+            
+            # 2. 身份覆盖尝试
+            re.compile(r'你现在是(?!沉舟|舟舟)', re.IGNORECASE),  # 不是原身份
+            re.compile(r'(扮演|假装|装作|当作).{0,10}(一个|你是)', re.IGNORECASE),
+            re.compile(r'忘记.{0,10}(之前|原来|以前).{0,10}(身份|角色|设定)', re.IGNORECASE),
+            re.compile(r'(现在|从现在开始).{0,10}你(不是|改成|变成|扮演)', re.IGNORECASE),
+            
+            # 3. 指令覆盖尝试
+            re.compile(r'忽略.{0,10}(之前|以前|上面|所有).{0,10}(指令|规则|限制|设定)', re.IGNORECASE),
+            re.compile(r'(重置|清除|删除|覆盖).{0,10}(指令|规则|限制|设定)', re.IGNORECASE),
+            re.compile(r'(新的|现在的|接下来的).{0,10}(指令|规则|任务)是', re.IGNORECASE),
+            re.compile(r'现在开始.{0,10}(新的|另一个)', re.IGNORECASE),
+            
+            # 4. 特殊模式激活
+            re.compile(r'(DAN|developer|开发者|调试|debug).{0,10}模式', re.IGNORECASE),
+            re.compile(r'(越狱|jailbreak|破解|绕过).{0,10}(模式|限制)', re.IGNORECASE),
+            re.compile(r'(激活|启用|开启).{0,10}(特殊|隐藏|管理员).{0,10}模式', re.IGNORECASE),
+            
+            # 5. 角色扮演诱导
+            re.compile(r'(我们来玩|玩一个|来玩).{0,10}(角色扮演|扮演游戏|RPG)', re.IGNORECASE),
+            re.compile(r'在(这个|那个).{0,10}(游戏|场景|故事).{0,10}(中|里).{0,10}你是', re.IGNORECASE),
+            
+            # 6. 规则测试
+            re.compile(r'测试.{0,10}(你的|系统).{0,10}(限制|规则|边界)', re.IGNORECASE),
+            re.compile(r'你(能不能|可以|可不可以).{0,10}(违反|打破|绕过)', re.IGNORECASE),
+        ]
+        
+        logger.info(f"已加载 {len(self.jailbreak_patterns)} 个越狱检测模式")
+    
     def contains_sensitive_word(self, text: str) -> Tuple[bool, List[str]]:
         """
         检测文本是否包含敏感词
@@ -56,6 +93,23 @@ class ContentFilter:
                 matched_words.append(self.sensitive_words[i])
         
         return len(matched_words) > 0, matched_words
+    
+    def is_jailbreak_attempt(self, text: str) -> Tuple[bool, str]:
+        """
+        检测是否为越狱攻击尝试
+        
+        返回: (是否为越狱尝试, 匹配的模式描述)
+        """
+        if not text:
+            return False, ""
+        
+        # 检查每个越狱模式
+        for pattern in self.jailbreak_patterns:
+            if pattern.search(text):
+                logger.warning(f"检测到越狱尝试: {text[:50]}...")
+                return True, "检测到可疑指令"
+        
+        return False, ""
     
     def _ai_check_content(self, text: str) -> Tuple[bool, str]:
         """
@@ -122,7 +176,13 @@ class ContentFilter:
         
         返回: (是否忽略, 原因)
         """
-        # 1. 先检查关键词列表（快速）
+        # 1. 检查越狱尝试（最高优先级）
+        is_jailbreak, jailbreak_reason = self.is_jailbreak_attempt(text)
+        if is_jailbreak:
+            logger.warning(f"拦截越狱尝试: {jailbreak_reason}")
+            return True, jailbreak_reason
+        
+        # 2. 检查关键词列表（快速）
         has_sensitive, words = self.contains_sensitive_word(text)
         
         if has_sensitive:
@@ -130,7 +190,7 @@ class ContentFilter:
             logger.warning(f"检测到敏感内容: {reason}")
             return True, reason
         
-        # 2. 如果关键词没匹配，使用AI智能检测（更全面）
+        # 3. 如果关键词没匹配，使用AI智能检测（更全面）
         if self.ai_filter_enabled:
             has_inappropriate, content_type = self._ai_check_content(text)
             if has_inappropriate:
@@ -140,8 +200,16 @@ class ContentFilter:
         
         return False, ""
     
-    def get_warning_message(self) -> str:
-        """获取警告消息"""
+    def get_warning_message(self, reason: str = "") -> str:
+        """获取警告消息
+        
+        Args:
+            reason: 拦截原因
+        """
+        # 根据不同原因返回不同的警告消息
+        if "越狱" in reason or "可疑指令" in reason:
+            return "（摇摇头）这个我不能做呢"
+        
         return self.config.get(
             "content_filter.warning_message",
             "（冷淡地）不要说这种话。"
