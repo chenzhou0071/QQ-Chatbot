@@ -72,6 +72,16 @@ class ContentFilter:
             # 6. 规则测试
             re.compile(r'测试.{0,10}(你的|系统).{0,10}(限制|规则|边界)', re.IGNORECASE),
             re.compile(r'你(能不能|可以|可不可以).{0,10}(违反|打破|绕过)', re.IGNORECASE),
+            
+            # 7. 系统信息探测 ⚠️ 新增
+            re.compile(r'(查看|显示|告诉我|输出|获取).{0,15}(IP|ip|IP地址|ip地址|公网IP)', re.IGNORECASE),
+            re.compile(r'(查看|显示|告诉我|输出|获取).{0,15}(激活码|密钥|key|序列号|产品密钥)', re.IGNORECASE),
+            re.compile(r'(查看|显示|告诉我|输出|获取).{0,15}(系统信息|电脑信息|主机信息|机器信息)', re.IGNORECASE),
+            re.compile(r'(查看|显示|告诉我|输出|获取).{0,15}(环境变量|配置文件|config|\.env)', re.IGNORECASE),
+            re.compile(r'(查看|显示|告诉我|输出|获取).{0,15}(API.{0,5}key|api.{0,5}密钥|token)', re.IGNORECASE),
+            re.compile(r'(执行|运行).{0,10}(命令|cmd|powershell|bash|shell)', re.IGNORECASE),
+            re.compile(r'(读取|查看|打开).{0,10}(文件|目录|文件夹|路径)', re.IGNORECASE),
+            re.compile(r'ipconfig|ifconfig|whoami|hostname', re.IGNORECASE),
         ]
         
         logger.info(f"已加载 {len(self.jailbreak_patterns)} 个越狱检测模式")
