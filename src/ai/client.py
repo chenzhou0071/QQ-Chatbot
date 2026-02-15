@@ -50,7 +50,8 @@ class AIClient:
              temperature: Optional[float] = None, 
              search_context: Optional[str] = None, 
              chat_type: str = "group", 
-             sender_qq: Optional[str] = None) -> Optional[str]:
+             sender_qq: Optional[str] = None,
+             enable_auto_search: bool = True) -> Optional[str]:
         """发送聊天请求
         
         Args:
@@ -59,6 +60,7 @@ class AIClient:
             search_context: 联网搜索的上下文信息
             chat_type: 聊天类型，"group" 为群聊，"private" 为私聊
             sender_qq: 发送者的 QQ 号，用于识别管理员
+            enable_auto_search: 是否启用自动搜索（当AI无法回答时）
             
         Returns:
             AI回复内容，失败返回None
@@ -90,6 +92,38 @@ class AIClient:
                 
                 reply = response.choices[0].message.content.strip()
                 logger.debug(f"AI回复成功: {reply[:50]}...")
+                
+                # 检查是否需要自动搜索
+                if enable_auto_search and not search_context and self._should_auto_search(reply, messages):
+                    logger.info("检测到AI无法回答，尝试联网搜索")
+                    # 获取用户的最后一条消息
+                    user_message = None
+                    for msg in reversed(messages):
+                        if msg.get("role") == "user":
+                            user_message = msg.get("content")
+                            break
+                    
+                    if user_message:
+                        # 导入 web_search（避免循环导入）
+                        from src.utils.web_search import get_web_search_client
+                        web_search_client = get_web_search_client()
+                        
+                        # 执行搜索
+                        search_result = web_search_client.search(user_message)
+                        if search_result:
+                            logger.info("搜索成功，使用搜索结果重新生成回复")
+                            # 递归调用，但禁用自动搜索避免无限循环
+                            return self.chat(
+                                messages=messages,
+                                temperature=temperature,
+                                search_context=search_result,
+                                chat_type=chat_type,
+                                sender_qq=sender_qq,
+                                enable_auto_search=False  # 禁用自动搜索
+                            )
+                        else:
+                            logger.warning("搜索失败，返回原始回复")
+                
                 return reply
             
             except ConnectionError as e:
@@ -129,6 +163,38 @@ class AIClient:
                     return self._fallback_reply()
         
         return None
+    
+    def _should_auto_search(self, reply: str, messages: List[Dict[str, str]]) -> bool:
+        """判断AI回复是否表明需要联网搜索
+        
+        Args:
+            reply: AI的回复内容
+            messages: 对话消息列表
+            
+        Returns:
+            是否需要自动搜索
+        """
+        # 检测AI回复中的"不知道"、"不了解"等关键词
+        uncertain_keywords = [
+            "不知道", "不清楚", "不了解", "不太清楚", "不太了解",
+            "不确定", "不太确定", "没听说过", "不太懂",
+            "我不知道", "我不清楚", "我不了解", "我不确定",
+            "无法回答", "无法告诉", "不能回答",
+            "需要查一下", "需要搜索", "需要联网"
+        ]
+        
+        # 如果回复包含这些关键词，需要搜索
+        if any(keyword in reply for keyword in uncertain_keywords):
+            logger.debug(f"检测到不确定关键词: {reply[:50]}...")
+            return True
+        
+        # 如果回复包含"抱歉"、"对不起"等道歉词，可能是无法回答
+        apology_keywords = ["抱歉", "对不起", "不好意思", "很遗憾"]
+        if any(keyword in reply for keyword in apology_keywords):
+            logger.debug(f"检测到道歉关键词: {reply[:50]}...")
+            return True
+        
+        return False
     
     def _fallback_reply(self) -> str:
         """降级回复

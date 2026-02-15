@@ -339,39 +339,67 @@ set_nickname_cmd = on_command("昵称", permission=SUPERUSER, priority=1, block=
 @set_nickname_cmd.handle()
 async def set_nickname(bot: Bot, event, args: Message = CommandArg()):
     """设置群友昵称"""
-    text = args.extract_plain_text().strip()
-    
-    # 尝试提取@的QQ号
-    at_segments = [seg for seg in args if seg.type == "at"]
-    
-    if at_segments:
-        qq_id = str(at_segments[0].data["qq"])
-        # 提取昵称
-        nickname = text.strip()
-        if not nickname:
-            await set_nickname_cmd.finish("❌ 请输入昵称")
-            return
-    else:
-        # 解析 QQ号 昵称
-        parts = text.split(maxsplit=1)
-        if len(parts) != 2:
-            await set_nickname_cmd.finish("❌ 格式错误，请使用：/昵称 @用户 昵称 或 /昵称 QQ号 昵称")
+    try:
+        # 记录原始消息用于调试
+        logger.info(f"收到设置昵称命令，原始参数: {args}")
+        
+        # 尝试提取@的QQ号
+        at_segments = [seg for seg in args if seg.type == "at"]
+        text = args.extract_plain_text().strip()
+        
+        logger.info(f"解析结果 - at_segments数量: {len(at_segments)}, 文本内容: '{text}'")
+        
+        if at_segments:
+            qq_id = str(at_segments[0].data["qq"])
+            # 提取昵称（文本中除了@符号外的内容）
+            # 由于 extract_plain_text() 不包含@符号，直接使用即可
+            nickname = text.strip()
+            logger.info(f"使用@格式 - QQ: {qq_id}, 昵称: '{nickname}'")
+            
+            if not nickname:
+                await set_nickname_cmd.finish("❌ 请输入昵称\n格式：/昵称 @用户 昵称")
+                return
+        else:
+            # 解析 QQ号 昵称
+            parts = text.split(maxsplit=1)
+            logger.info(f"使用QQ号格式 - 分割结果: {parts}")
+            
+            if len(parts) != 2:
+                await set_nickname_cmd.finish("❌ 格式错误\n正确格式：\n• /昵称 @用户 昵称\n• /昵称 QQ号 昵称")
+                return
+            
+            qq_id = parts[0]
+            nickname = parts[1]
+            logger.info(f"解析成功 - QQ: {qq_id}, 昵称: '{nickname}'")
+        
+        # 获取群友信息
+        member = member_db.get_member(qq_id)
+        if not member:
+            logger.warning(f"未找到群友信息: {qq_id}")
+            await set_nickname_cmd.finish(f"❌ 未找到该群友信息：{qq_id}\n\n可能原因：\n• 该用户从未在群里发过消息\n• 数据库中没有记录\n\n建议：让该用户先在群里发一条消息")
             return
         
-        qq_id = parts[0]
-        nickname = parts[1]
-    
-    # 获取群友信息
-    member = member_db.get_member(qq_id)
-    if not member:
-        await set_nickname_cmd.finish(f"❌ 未找到该群友信息：{qq_id}")
-        return
-    
-    # 设置昵称
-    if member_db.set_nickname(qq_id, nickname, confirmed=True):
-        await set_nickname_cmd.finish(f"✅ 已设置昵称为：{nickname}")
-    else:
-        await set_nickname_cmd.finish("❌ 设置昵称失败")
+        # 显示当前信息
+        old_nickname = member.get('nickname')
+        logger.info(f"当前昵称: {old_nickname} -> 新昵称: {nickname}")
+        
+        # 设置昵称
+        if member_db.set_nickname(qq_id, nickname, confirmed=True):
+            logger.info(f"✅ 昵称设置成功: {qq_id} -> {nickname}")
+            
+            # 构建回复消息
+            display_name = member.get('group_card') or member.get('qq_name') or qq_id
+            if old_nickname:
+                await set_nickname_cmd.finish(f"✅ 已更新昵称\n{display_name}\n{old_nickname} → {nickname}")
+            else:
+                await set_nickname_cmd.finish(f"✅ 已设置昵称\n{display_name} → {nickname}")
+        else:
+            logger.error(f"❌ 昵称设置失败: {qq_id}")
+            await set_nickname_cmd.finish("❌ 设置昵称失败，请查看日志")
+            
+    except Exception as e:
+        logger.error(f"设置昵称时发生错误: {e}", exc_info=True)
+        await set_nickname_cmd.finish(f"❌ 设置昵称时发生错误：{str(e)}")
 
 
 # 命令：统计

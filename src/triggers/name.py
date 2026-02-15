@@ -2,6 +2,7 @@
 import re
 from nonebot import on_message
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message
+from nonebot.exception import IgnoredException
 
 from src.utils.config import get_config
 from src.utils.logger import get_logger
@@ -42,29 +43,50 @@ def has_bilibili_link(message: str) -> bool:
     )
 
 # 名字触发器（优先级高于关键词，低于@触发）
-name_matcher = on_message(priority=8, block=True)
+# block=False 允许其他触发器继续处理
+name_matcher = on_message(priority=8, block=False)
 
 @name_matcher.handle()
-async def handle_name_mention(bot: Bot, event: GroupMessageEvent):
+async def handle_name_mention(bot: Bot, event):
     """处理名字提及"""
+    logger.info(f"[群] 名字触发器被调用")
+    
+    # 只处理群消息
+    from nonebot.adapters.onebot.v11 import GroupMessageEvent
+    if not isinstance(event, GroupMessageEvent):
+        logger.info(f"[群] 不是群消息，跳过")
+        return
+    
+    logger.info(f"[群] 是群消息，继续处理")
+    
     # 检查功能是否开启
     if not config.get("features.name_reply", True):
+        logger.info(f"[群] 名字回复功能未开启")
         return
+    
+    logger.info(f"[群] 功能已开启")
     
     # 检查是否是目标群
     if str(event.group_id) != config.target_group:
+        logger.info(f"[群] 非目标群: {event.group_id}, 目标群: {config.target_group}")
         return
     
-    # 获取消息内容
-    message_text = str(event.get_message()).strip()
+    logger.info(f"[群] 是目标群")
+    
+    # 获取消息内容 - 使用 raw_message 而不是 get_message()
+    message_text = event.raw_message.strip()
+    logger.info(f"[群] 原始消息: '{message_text}'")
     
     # 如果是@消息，跳过（已被mention_matcher处理）
     if is_at_bot(message_text, config.bot_qq):
+        logger.debug(f"[群] 检测到@消息，跳过名字触发")
         return
     
     message_text = remove_at(message_text)
+    logger.debug(f"[群] 处理后消息: '{message_text}'")
     
     if not message_text:
+        logger.debug(f"[群] 消息为空")
         return
     
     # 获取配置的名字和昵称
@@ -72,9 +94,15 @@ async def handle_name_mention(bot: Bot, event: GroupMessageEvent):
     name = personality.get("name", "沉舟")
     nickname = personality.get("nickname", "舟舟")
     
+    logger.debug(f"[群] 检查名字: {name}, 昵称: {nickname}")
+    
     # 检查是否提到了名字或昵称
     if name not in message_text and nickname not in message_text:
+        logger.debug(f"[群] 消息中未提到名字或昵称")
         return
+    
+    # 找到匹配，阻止后续触发器
+    logger.info(f"[群] 检测到名字提及，开始处理: '{message_text}'")
     
     # 如果消息中包含B站链接，跳过（已被B站解析插件处理）
     if has_bilibili_link(message_text):
@@ -90,7 +118,8 @@ async def handle_name_mention(bot: Bot, event: GroupMessageEvent):
             warning_msg = content_filter.get_warning_message()
             await name_matcher.send(Message(warning_msg))
             logger.warning(f"[群] 消息被过滤: {reason}")
-            return
+            # 阻止后续触发器
+            raise IgnoredException("消息被内容过滤器拦截")
     
     # 检查是否需要联网搜索
     search_context = None
@@ -121,3 +150,5 @@ async def handle_name_mention(bot: Bot, event: GroupMessageEvent):
         await name_matcher.send(Message(reply))
         memory_manager.add_message("group", "assistant", reply)
         logger.info(f"[群] 名字回复: {reply}")
+        # 阻止后续触发器
+        raise IgnoredException("名字触发器已处理")

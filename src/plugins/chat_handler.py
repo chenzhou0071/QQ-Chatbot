@@ -49,8 +49,9 @@ if config.get("dialogue_intelligence.proactive.enabled", False):
     except Exception as e:
         logger.error(f"主动对话引擎初始化失败: {e}")
 
-# @触发回复
-mention_matcher = on_message(rule=to_me(), priority=5, block=True)
+# @触发回复（只处理@消息，不处理昵称提及）
+# block=False 允许其他触发器继续处理，只有真正处理了消息才抛出 IgnoredException
+mention_matcher = on_message(priority=5, block=False)
 
 
 @mention_matcher.handle()
@@ -61,11 +62,19 @@ async def handle_mention(bot: Bot, event: GroupMessageEvent | PrivateMessageEven
         bot: Bot实例
         event: 消息事件（群消息或私聊消息）
     """
+    # 获取原始消息 - 使用 raw_message
+    raw_message = event.raw_message.strip()
+    
     # 判断消息类型
     if isinstance(event, GroupMessageEvent):
         # 检查是否是目标群
         if str(event.group_id) != config.target_group:
             return
+        
+        # 只处理@消息，不处理昵称提及
+        if not is_at_bot(raw_message, config.bot_qq):
+            return
+        
         chat_type = "group"
         sender_name: str = event.sender.card or event.sender.nickname
         sender_qq: str = str(event.user_id)
@@ -74,19 +83,27 @@ async def handle_mention(bot: Bot, event: GroupMessageEvent | PrivateMessageEven
         if proactive_engine:
             proactive_engine.update_message_time(str(event.group_id))
     else:
+        # 私聊消息
         # 检查是否是管理员
         if str(event.user_id) != config.admin_qq:
             logger.debug(f"忽略非管理员私聊: {event.user_id}")
             return
+        
         chat_type = "private"
         sender_name: str = event.sender.nickname
         sender_qq: str = str(event.user_id)
     
-    # 获取消息内容
-    message_text: str = str(event.get_message()).strip()
-    message_text = remove_at(message_text)
+    # 获取消息内容（私聊不需要移除@）
+    if isinstance(event, PrivateMessageEvent):
+        message_text = raw_message
+    else:
+        message_text = remove_at(raw_message)
+    
+    logger.info(f"[{chat_type}] 原始消息: '{raw_message}'")
+    logger.info(f"[{chat_type}] 处理后消息: '{message_text}'")
     
     if not message_text:
+        logger.warning(f"[{chat_type}] 消息内容为空，忽略")
         return
     
     logger.info(f"[{chat_type}] 收到@消息: {sender_name}: {message_text}")
@@ -209,6 +226,10 @@ async def handle_mention(bot: Bot, event: GroupMessageEvent | PrivateMessageEven
                 logger.debug(f"[{chat_type}] 注册问题: {reply[:30]}...")
             except Exception as e:
                 logger.error(f"[{chat_type}] 注册问题失败: {e}")
+        
+        # 阻止后续触发器
+        from nonebot.exception import IgnoredException
+        raise IgnoredException("@触发器已处理")
 
 
 def _build_intent_hint(intent_result) -> Optional[str]:

@@ -2,6 +2,7 @@
 from typing import Optional
 from nonebot import on_message
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message
+from nonebot.exception import IgnoredException
 
 from src.utils.config import get_config
 from src.utils.logger import get_logger
@@ -19,37 +20,49 @@ web_search_client = get_web_search_client()
 content_filter = get_content_filter()
 
 # 关键词触发器（优先级低于@触发）
-keyword_matcher = on_message(priority=10, block=True)
+# block=False 允许智能触发器继续处理
+keyword_matcher = on_message(priority=10, block=False)
 
 @keyword_matcher.handle()
 async def handle_keyword(bot: Bot, event: GroupMessageEvent):
     """处理关键词触发"""
+    logger.debug(f"[群] 关键词触发器被调用")
+    
     # 检查功能是否开启
     if not config.get("features.keyword_reply", True):
+        logger.debug(f"[群] 关键词回复功能未开启")
         return
     
     # 检查是否是目标群
     if str(event.group_id) != config.target_group:
+        logger.debug(f"[群] 非目标群: {event.group_id}")
         return
     
-    # 获取消息内容
-    message_text = str(event.get_message()).strip()
+    # 获取消息内容 - 使用 raw_message
+    message_text = event.raw_message.strip()
+    logger.debug(f"[群] 原始消息: '{message_text}'")
     
     # 如果是@消息，跳过（已被mention_matcher处理）
     if is_at_bot(message_text, config.bot_qq):
+        logger.debug(f"[群] 检测到@消息，跳过关键词触发")
         return
     
     message_text = remove_at(message_text)
+    logger.debug(f"[群] 处理后消息: '{message_text}'")
     
     if not message_text:
+        logger.debug(f"[群] 消息为空")
         return
     
     # 检查是否包含关键词
     keywords = config.keywords
+    logger.debug(f"[群] 检查关键词: {keywords}")
     if not contains_keyword(message_text, keywords):
+        logger.debug(f"[群] 消息中未包含关键词")
         return
     
-    logger.info(f"[群] 关键词触发: {message_text}")
+    # 找到匹配，开始处理
+    logger.info(f"[群] 关键词触发，开始处理: {message_text}")
     
     # 内容过滤检查
     if config.get("content_filter.enabled", True):
@@ -58,7 +71,8 @@ async def handle_keyword(bot: Bot, event: GroupMessageEvent):
             warning_msg = content_filter.get_warning_message()
             await keyword_matcher.send(Message(warning_msg))
             logger.warning(f"[群] 消息被过滤: {reason}")
-            return
+            # 阻止后续触发器
+            raise IgnoredException("消息被内容过滤器拦截")
     
     # 获取发送者信息
     sender_name = event.sender.card or event.sender.nickname
@@ -107,3 +121,5 @@ async def handle_keyword(bot: Bot, event: GroupMessageEvent):
             memory_manager.add_message("group", "assistant", reply)
         
         logger.info(f"[群] 关键词回复: {reply}")
+        # 阻止后续触发器
+        raise IgnoredException("关键词触发器已处理")

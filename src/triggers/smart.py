@@ -46,8 +46,8 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent) -> None:
     if str(event.group_id) != config.target_group:
         return
     
-    # 获取消息内容
-    message_text = str(event.get_message()).strip()
+    # 获取消息内容 - 使用 raw_message
+    message_text = event.raw_message.strip()
     
     # 如果是@消息或包含关键词，跳过
     if is_at_bot(message_text, config.bot_qq):

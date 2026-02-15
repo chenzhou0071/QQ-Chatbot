@@ -75,6 +75,31 @@ clean_data.bat
 
 ---
 
+### clear_memory.bat
+**功能**：清空机器人记忆（保留群友数据库）
+
+**使用**：
+```bash
+cd scripts
+clear_memory.bat
+```
+
+**清空内容**：
+- 对话上下文 (conversation_context 表)
+- 聊天记录 (chat_log 表)
+- 向量记忆 (data\chroma 目录)
+
+**保留内容**：
+- 群友信息 (group_member 表)
+- 群友昵称、生日、备注等
+
+**使用场景**：
+- 想让机器人"忘记"之前的对话
+- 但保留群友的个人信息
+- 重新开始对话但不丢失群友数据
+
+---
+
 ## 💡 使用建议
 
 ### 首次使用

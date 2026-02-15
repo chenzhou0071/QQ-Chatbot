@@ -57,9 +57,14 @@ async def _():
     logger.info("OneBot V11 WebSocket 服务端已启动，监听端口: 3001")
     logger.info("等待 NapCat 连接到 ws://127.0.0.1:8080/onebot/v11/ws")
 
-# 加载插件
+# 先加载触发器模块（在加载其他插件之前）
+nonebot.load_plugin("src.triggers.name")
+nonebot.load_plugin("src.triggers.keyword")
+nonebot.load_plugin("src.triggers.smart")
+nonebot.load_plugin("src.triggers.scheduler")
+
+# 然后加载其他插件
 nonebot.load_plugins("src/plugins")
-nonebot.load_plugins("src/triggers")
 
 if __name__ == "__main__":
     nonebot.run()
