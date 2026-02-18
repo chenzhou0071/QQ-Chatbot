@@ -68,6 +68,7 @@ keyword_fixed_replies:
 smart_reply:
   trigger_rate: 0.5               # 触发概率(50%)
   min_interval: 30                # 最小间隔(秒)
+  continuous_window: 30           # 连续对话窗口(秒)，在此时间内用户继续发言会自动回复
 
 # 主动聊天配置
 auto_chat:

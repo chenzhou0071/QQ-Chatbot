@@ -19,6 +19,9 @@ memory_manager = get_memory_manager()
 web_search_client = get_web_search_client()
 content_filter = get_content_filter()
 
+# 记录最近被名字触发的用户（用于连续对话检测）
+recent_name_triggers = {}  # {user_id: timestamp}
+
 # B站链接检测正则（与bilibili.py保持一致）
 REG_BV = re.compile(r'BV[0-9A-Za-z]{10}')
 REG_AV = re.compile(r'av(\d+)', re.IGNORECASE)
@@ -150,5 +153,11 @@ async def handle_name_mention(bot: Bot, event):
         await name_matcher.send(Message(reply))
         memory_manager.add_message("group", "assistant", reply)
         logger.info(f"[群] 名字回复: {reply}")
+        
+        # 记录触发时间（用于连续对话检测）
+        import time
+        recent_name_triggers[sender_qq] = time.time()
+        logger.debug(f"[群] 记录名字触发: {sender_qq}")
+        
         # 阻止后续触发器
         raise IgnoredException("名字触发器已处理")

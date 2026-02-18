@@ -24,6 +24,9 @@ content_filter = get_content_filter()
 # 记录上次触发时间
 last_trigger_time: float = 0.0
 
+# 记录最近回复的用户（用于连续对话检测）
+recent_replies = {}  # {user_id: timestamp}
+
 # 智能判断触发器（优先级最低）
 smart_matcher = on_message(priority=15, block=False)
 
@@ -73,17 +76,65 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent) -> None:
     if not message_text:
         return
     
-    # 检查触发概率
-    trigger_rate: float = config.get("smart_reply.trigger_rate", 0.5)
-    if random.random() > trigger_rate:
-        return
-    
-    # 检查最小间隔
-    min_interval: int = config.get("smart_reply.min_interval", 30)
+    # 获取发送者QQ
+    sender_qq: str = str(event.user_id)
     current_time: float = time.time()
-    if current_time - last_trigger_time < min_interval:
-        logger.debug(f"[群] 距离上次触发不足{min_interval}秒，跳过")
-        return
+    
+    # 检查是否是连续对话
+    is_continuous = False
+    continuous_window: int = config.get("smart_reply.continuous_window", 30)
+    
+    # 获取配置的名字和昵称
+    personality = config.get("personality", {})
+    bot_name: str = personality.get("name", "沉舟")
+    bot_nickname: str = personality.get("nickname", "舟舟")
+    
+    # 检查消息是否在和bot对话
+    # 1. 包含bot名字或昵称
+    has_bot_name = bot_name in message_text or bot_nickname in message_text
+    
+    # 2. 疑问句特征
+    question_marks = ['?', '？', '吗', '呢', '吧', '啊']
+    question_words = ['什么', '怎么', '为什么', '哪', '谁', '几', '多少', '如何', '干嘛', '干什么']
+    question_patterns = ['你在', '你是', '你会', '你有', '你觉得', '你想', '你知道']
+    
+    is_question = (
+        any(mark in message_text for mark in question_marks) or
+        any(word in message_text for word in question_words) or
+        any(pattern in message_text for pattern in question_patterns)
+    )
+    
+    # 只要满足其中一个条件就认为是在和bot对话
+    is_talking_to_bot = has_bot_name or is_question
+    
+    # 只有在和bot对话时才检测连续对话
+    if is_talking_to_bot:
+        # 检查是否刚被名字触发过
+        from src.triggers.name import recent_name_triggers
+        if sender_qq in recent_name_triggers:
+            time_since_name_trigger = current_time - recent_name_triggers[sender_qq]
+            if time_since_name_trigger < continuous_window:
+                is_continuous = True
+                logger.info(f"[群] 检测到连续对话（名字触发后 {time_since_name_trigger:.1f}秒）")
+        
+        # 检查是否刚被智能触发回复过
+        if not is_continuous and sender_qq in recent_replies:
+            time_since_reply = current_time - recent_replies[sender_qq]
+            if time_since_reply < continuous_window:
+                is_continuous = True
+                logger.info(f"[群] 检测到连续对话（上次回复后 {time_since_reply:.1f}秒）")
+    
+    # 如果不是连续对话，检查触发概率
+    if not is_continuous:
+        trigger_rate: float = config.get("smart_reply.trigger_rate", 0.5)
+        if random.random() > trigger_rate:
+            return
+        
+        # 检查最小间隔
+        min_interval: int = config.get("smart_reply.min_interval", 30)
+        if current_time - last_trigger_time < min_interval:
+            logger.debug(f"[群] 距离上次触发不足{min_interval}秒，跳过")
+            return
     
     logger.debug(f"[群] 智能判断: {message_text}")
     
@@ -95,15 +146,19 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent) -> None:
             logger.debug(f"[群] 消息被过滤: {reason}")
             return
     
-    # 调用AI判断是否需要回复
-    prompt: str = get_smart_reply_prompt(message_text)
-    decision: Optional[str] = ai_client.simple_chat(prompt)
-    
-    if not decision or "YES" not in decision.upper():
-        logger.debug("[群] AI判断不需要回复")
-        return
-    
-    logger.info("[群] AI判断需要回复")
+    # 如果是连续对话，跳过AI判断直接回复
+    if is_continuous:
+        logger.info("[群] 连续对话，直接回复")
+    else:
+        # 调用AI判断是否需要回复
+        prompt: str = get_smart_reply_prompt(message_text)
+        decision: Optional[str] = ai_client.simple_chat(prompt)
+        
+        if not decision or "YES" not in decision.upper():
+            logger.debug("[群] AI判断不需要回复")
+            return
+        
+        logger.info("[群] AI判断需要回复")
     
     # 更新触发时间
     last_trigger_time = current_time
@@ -118,7 +173,6 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent) -> None:
     
     # 获取发送者信息
     sender_name: str = event.sender.card or event.sender.nickname
-    sender_qq: str = str(event.user_id)
     
     # 添加用户消息到记忆系统
     memory_manager.add_message(
@@ -142,3 +196,7 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent) -> None:
         await smart_matcher.send(Message(reply))
         memory_manager.add_message("group", "assistant", reply)
         logger.info(f"[群] 智能回复: {reply}")
+        
+        # 记录回复时间（用于连续对话检测）
+        recent_replies[sender_qq] = time.time()
+        logger.debug(f"[群] 记录智能回复: {sender_qq}")
