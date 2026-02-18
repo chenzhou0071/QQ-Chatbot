@@ -44,6 +44,8 @@ env/
 # Database
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # Logs
 logs/

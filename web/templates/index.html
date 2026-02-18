@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QQ Bot 管理面板</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>🤖 QQ Bot 管理面板</h1>
+            </div>
+            <div class="nav-menu">
+                <button @click="currentPage = 'dashboard'" :class="{active: currentPage === 'dashboard'}">
+                    🏠 仪表盘
+                </button>
+                <button @click="currentPage = 'config'" :class="{active: currentPage === 'config'}">
+                    ⚙️ 配置
+                </button>
+                <button @click="currentPage = 'logs'" :class="{active: currentPage === 'logs'}">
+                    📝 日志
+                </button>
+                <button @click="currentPage = 'members'" :class="{active: currentPage === 'members'}">
+                    👥 群友
+                </button>
+                <button @click="currentPage = 'stats'" :class="{active: currentPage === 'stats'}">
+                    📊 统计
+                </button>
+            </div>
+        </nav>
+
+        <!-- 主内容区 -->
+        <div class="container">
+            <!-- 仪表盘页面 -->
+            <div v-if="currentPage === 'dashboard'" class="page">
+                <h2>仪表盘</h2>
+                
+                <!-- Bot状态卡片 -->
+                <div class="card">
+                    <h3>🤖 Bot 状态</h3>
+                    <div class="status-panel">
+                        <div class="status-indicator">
+                            <span class="status-dot" :class="{running: botStatus.running}"></span>
+                            <span class="status-text">{{ botStatus.running ? '运行中' : '未运行' }}</span>
+                        </div>
+                        <div class="control-buttons">
+                            <button @click="startBot" :disabled="botStatus.running" class="btn-success">启动</button>
+                            <button @click="stopBot" :disabled="!botStatus.running" class="btn-danger">停止</button>
+                            <button @click="restartBot" :disabled="!botStatus.running" class="btn-warning">重启</button>
+                        </div>
+                    </div>
+                    <div v-if="botStatus.running" class="status-details">
+                        <div class="status-item">
+                            <span class="label">QQ号:</span>
+                            <span class="value">{{ config.bot?.qq_number || '-' }}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">运行时间:</span>
+                            <span class="value">{{ botStatus.uptime || '-' }}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">内存占用:</span>
+                            <span class="value">{{ botStatus.memory_mb }} MB</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">CPU:</span>
+                            <span class="value">{{ botStatus.cpu_percent }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 今日统计 -->
+                <div class="card">
+                    <h3>📊 今日统计</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.messages_received }}</div>
+                            <div class="stat-label">收到消息</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.replies_sent }}</div>
+                            <div class="stat-label">回复次数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.proactive_messages }}</div>
+                            <div class="stat-label">主动发言</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ (stats.trigger_rate * 100).toFixed(0) }}%</div>
+                            <div class="stat-label">触发率</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近日志预览 -->
+                <div class="card">
+                    <h3>🔥 最近活动</h3>
+                    <div class="log-preview">
+                        <div v-for="log in recentLogs.slice(-10)" :key="log.timestamp" class="log-line">
+                            <span class="log-time">{{ log.timestamp }}</span>
+                            <span class="log-message">{{ log.message }}</span>
+                        </div>
+                        <div v-if="recentLogs.length === 0" class="empty-state">
+                            暂无日志
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配置页面 -->
+            <div v-if="currentPage === 'config'" class="page">
+                <h2>配置管理</h2>
+                
+                <div class="card">
+                    <h3>🤖 基础配置</h3>
+                    <div class="form-group">
+                        <label>Bot QQ号</label>
+                        <input v-model="config.bot.qq_number" type="text" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>管理员QQ</label>
+                        <input v-model="config.bot.admin_qq" type="text" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>目标群号</label>
+                        <input v-model="config.bot.target_group" type="text" class="form-control">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🧠 AI配置</h3>
+                    <div class="form-group">
+                        <label>DeepSeek API Key</label>
+                        <input v-model="env.DEEPSEEK_API_KEY" type="password" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>阿里云 API Key</label>
+                        <input v-model="env.DASHSCOPE_API_KEY" type="password" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>温度参数 ({{ config.ai?.temperature || 0.7 }})</label>
+                        <input v-model.number="config.ai.temperature" type="range" min="0" max="1" step="0.1" class="form-range">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🎯 触发配置</h3>
+                    <div class="form-group">
+                        <label>
+                            <input v-model="config.features.mention_reply" type="checkbox">
+                            @触发回复
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input v-model="config.features.keyword_reply" type="checkbox">
+                            关键词触发
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input v-model="config.features.name_reply" type="checkbox">
+                            名字触发
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input v-model="config.features.smart_reply" type="checkbox">
+                            智能判断
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>触发概率 ({{ (config.smart_reply?.trigger_rate * 100 || 50).toFixed(0) }}%)</label>
+                        <input v-model.number="config.smart_reply.trigger_rate" type="range" min="0" max="1" step="0.05" class="form-range">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🎭 人设配置</h3>
+                    <div class="form-group">
+                        <label>名字</label>
+                        <input v-model="config.personality.name" type="text" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>昵称</label>
+                        <input v-model="config.personality.nickname" type="text" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button @click="saveConfig" class="btn-primary">保存配置</button>
+                    <button @click="loadConfig" class="btn-secondary">重新加载</button>
+                </div>
+            </div>
+
+            <!-- 日志页面 -->
+            <div v-if="currentPage === 'logs'" class="page">
+                <h2>实时日志</h2>
+                
+                <div class="card">
+                    <div class="log-controls">
+                        <button @click="clearLogs" class="btn-secondary">清空</button>
+                        <button @click="toggleAutoScroll" :class="{'btn-primary': autoScroll, 'btn-secondary': !autoScroll}">
+                            {{ autoScroll ? '自动滚动: 开' : '自动滚动: 关' }}
+                        </button>
+                    </div>
+                    <div class="log-container" ref="logContainer">
+                        <div v-for="log in logs" :key="log.timestamp + Math.random()" class="log-line">
+                            <span class="log-time">{{ log.timestamp }}</span>
+                            <span class="log-message">{{ log.message }}</span>
+                        </div>
+                        <div v-if="logs.length === 0" class="empty-state">
+                            等待日志...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 群友管理页面 -->
+            <div v-if="currentPage === 'members'" class="page">
+                <h2>群友管理</h2>
+                
+                <div class="card">
+                    <div class="members-list">
+                        <div v-for="member in members" :key="member.qq" class="member-item">
+                            <div class="member-info">
+                                <div class="member-name">
+                                    👤 {{ member.nickname || member.ai_nickname || member.qq }}
+                                </div>
+                                <div class="member-details">
+                                    <span>QQ: {{ member.qq }}</span>
+                                    <span v-if="member.birthday">生日: {{ member.birthday }} 🎂</span>
+                                    <span>消息数: {{ member.message_count }}</span>
+                                </div>
+                                <div v-if="member.notes" class="member-notes">
+                                    备注: {{ member.notes }}
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="members.length === 0" class="empty-state">
+                            暂无群友数据
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计页面 -->
+            <div v-if="currentPage === 'stats'" class="page">
+                <h2>数据统计</h2>
+                
+                <div class="card">
+                    <h3>📊 消息统计</h3>
+                    <p>功能开发中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

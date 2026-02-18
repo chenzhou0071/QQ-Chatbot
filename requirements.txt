@@ -10,3 +10,9 @@ chromadb>=0.4.22
 jieba>=0.42.1
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
+
+# Web管理界面依赖
+flask>=2.3.0
+flask-socketio>=5.3.0
+flask-cors>=4.0.0
+psutil>=5.9.0
