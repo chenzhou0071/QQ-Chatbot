@@ -200,6 +200,40 @@ class MemoryManager:
         
         return messages
     
+    def get_recent_messages(self, chat_type: str, limit: int = 10) -> List[Dict[str, str]]:
+        """获取最近的消息记录（用于上下文判断）
+        
+        Args:
+            chat_type: 聊天类型
+            limit: 返回消息数量
+            
+        Returns:
+            消息列表，每条消息包含 role, content, sender_name
+        """
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT sender_name, message_content, is_bot
+                    FROM chat_log
+                    WHERE chat_type = ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, (chat_type, limit))
+                
+                rows = cursor.fetchall()
+                messages = []
+                for row in reversed(rows):  # 反转顺序，从旧到新
+                    messages.append({
+                        'sender_name': row[0],
+                        'content': row[1],
+                        'role': 'assistant' if row[2] == 1 else 'user'
+                    })
+                return messages
+        except Exception as e:
+            logger.error(f"获取最近消息失败: {e}")
+            return []
+    
     def get_stats(self) -> Dict[str, any]:
         """获取记忆统计
         

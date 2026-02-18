@@ -1,380 +1,125 @@
-# QQ聊天机器人
+# QQ 聊天机器人
 
-基于 NoneBot2 + NapCat 的智能QQ聊天机器人，支持群聊互动、语义记忆和联网搜索。
+一个基于 NoneBot2 和 NapCat 的智能 QQ 群聊机器人，支持 Web 管理界面。
 
-## ✨ 功能特性
+## ✨ 特性
 
-### 核心功能
-- ✅ **@触发回复**：群成员@机器人时智能回复
-- ✅ **关键词触发**：检测关键词自动回复（支持固定回复）
-- ✅ **名字触发**：提到机器人名字时主动回复
-- ✅ **智能判断**：AI判断是否需要参与对话
-- ✅ **定时任务**：早安/晚安问候、随机话题
-- ✅ **B站链接解析**：自动识别并解析B站视频/番剧链接
-
-### 🆕 对话智能增强（新功能）
-- ✅ **意图分析**：
-  - 反问检测：识别用户反问并回答自己的情况
-  - 讽刺识别：理解讽刺语气并恰当回应
-  - 话题追踪：自动追踪对话话题，检测话题切换
-- ✅ **对话状态机**：
-  - 4种对话状态：开启、维持、切换、结束
-  - 状态感知prompt：根据对话状态调整回复风格
-  - 自然过渡：话题切换时平滑过渡
-- ✅ **主动对话**：
-  - 冷场检测：3级冷场检测（5/10/20分钟）
-  - 智能破冰：根据氛围主动发起话题
-  - 频率控制：冷却机制防止过度打扰
-
-### 记忆系统（三层架构）
-- ✅ **短期记忆**：内存缓存，最近30条消息，30分钟超时
-- ✅ **长期记忆**：SQLite数据库，永久保存所有聊天记录
-- ✅ **语义记忆**：Chroma向量数据库，智能搜索相关历史对话
-
-### 群友管理
-- ✅ **自动收集**：群友发言时自动记录信息
-- ✅ **智能昵称**：AI推测简短昵称，管理员确认
-- ✅ **生日管理**：设置生日，自动发送祝福
-- ✅ **备注系统**：记录群友信息，AI对话时参考
-- ✅ **退群通知**：群友退群时自动通知
-- ✅ **信息查询**：查询群友详细信息和活跃度
-
-### 增强功能
-- ✅ **联网搜索**：实时获取网络信息（阿里云搜索API）
-- ✅ **上下文理解**：记住对话历史，智能关联
-- ✅ **人设系统**：可自定义机器人性格和说话风格
+- 🎭 **完全自定义人设** - 在 Web 界面自定义 Bot 的性格、外貌、说话风格
+- 🧠 **三层记忆系统** - 短期记忆、长期记忆、语义记忆
+- 💬 **智能对话** - 上下文理解、连续对话、主动插话
+- 🌐 **联网搜索** - 自动联网获取实时信息
+- 👥 **群友管理** - 记录群友信息、昵称、生日、备注
+- 🎯 **多种触发方式** - @触发、名字触发、关键词触发、智能判断
+- 🖥️ **Web 管理界面** - 实时日志、配置管理、Bot 控制
 
 ## 🚀 快速开始
 
-### 1. 环境要求
+### 1. 安装依赖
 
-- Windows 10/11
-- Python 3.9+
-- NapCat（已包含在项目中）
+双击运行 `install.bat`，会自动：
+- 创建 Python 虚拟环境
+- 安装所有依赖包
+- 初始化配置文件
 
-### 2. 安装
+### 2. 配置
 
-```bash
-# 运行安装脚本（自动创建虚拟环境并安装依赖）
-install.bat
-```
-
-### 3. 配置
-
-#### 编辑 `config/config.yaml`
+编辑 `config/config.yaml` 和 `config/.env`：
 
 ```yaml
+# config/config.yaml
 bot:
-  qq_number: "你的机器人QQ号"
-  admin_qq: "管理员QQ号"
-  target_group: "目标群号"
-
-personality:
-  name: "沉舟"
-  nickname: "舟舟"
+  qq_number: '你的Bot QQ号'
+  admin_qq: '管理员QQ号'
+  target_group: '目标群号'
 ```
-
-#### 编辑 `config/.env`
 
 ```env
-# AI模型（DeepSeek）
-DEEPSEEK_API_KEY=sk-xxxxx
-
-# 联网搜索和向量模型（阿里云）
-DASHSCOPE_API_KEY=sk-xxxxx
+# config/.env
+DEEPSEEK_API_KEY=your_deepseek_api_key
+DASHSCOPE_API_KEY=your_dashscope_api_key
 ```
 
-### 4. 启动
+### 3. 启动
 
-```bash
-# 方式1：一键启动（推荐）
-start_all.bat
+双击运行 `启动.bat`，会自动：
+- 启动 NapCat（扫码登录 QQ）
+- 启动 Web 管理界面
+- 打开浏览器访问 http://localhost:5000
 
-# 方式2：分步启动
-start_napcat.bat    # 先启动NapCat
-start_bot.bat       # 再启动机器人
-```
+在 Web 界面中点击"启动 Bot"即可开始使用！
 
-### 5. 停止
+## 📖 使用说明
 
-```bash
-stop_all.bat
-```
+### Web 管理界面
 
-### 6. 辅助工具（可选）
+访问 http://localhost:5000 可以：
 
-```bash
-# 测试功能
-scripts\test_features.bat
+- **仪表盘** - 查看 Bot 状态、今日统计、实时日志
+- **配置管理** - 修改 Bot 配置、AI 配置、人设配置
+- **群友管理** - 查看和编辑群友信息
+- **实时日志** - 查看 Bot 运行日志
 
-# 查看配置
-scripts\check_config.bat
+### 触发方式
 
-# 功能开关
-scripts\toggle_features.bat
+1. **@触发** - 在群里 @Bot
+2. **名字触发** - 消息中包含 Bot 的名字或昵称
+3. **关键词触发** - 配置的关键词（如"帮助"、"功能"）
+4. **智能判断** - Bot 会根据上下文智能判断是否回复
 
-# 清理数据
-scripts\clean_data.bat
-```
+### 人设自定义
+
+在 Web 界面的"配置管理"页面，可以完全自定义：
+
+- 基本信息（名字、昵称、背景故事）
+- 外貌特征（身高、发型、五官、气质）
+- 性格设定（核心性格、性格特质）
+- 说话风格（语气、方式、回应风格）
+- 管理员关系（管理员名字、关系描述）
+
+## 🛠️ 技术栈
+
+- **框架**: NoneBot2 + NapCat
+- **AI**: DeepSeek / 阿里云通义千问
+- **数据库**: SQLite + ChromaDB
+- **Web**: Flask + Vue 3 + Socket.IO
 
 ## 📁 项目结构
 
 ```
 QQ Chatbot/
-├── config/                    # 配置文件
-│   ├── config.yaml           # 主配置
-│   ├── config.yaml.example   # 配置模板
-│   ├── .env                  # 环境变量（API密钥）
-│   └── .env.example          # 环境变量模板
-│
-├── src/                      # 源代码
-│   ├── bot.py               # 程序入口
-│   ├── ai/                  # AI模块
-│   │   ├── client.py        # DeepSeek客户端
-│   │   ├── prompts.py       # 提示词管理
-│   │   └── nickname_analyzer.py # 昵称分析器
-│   ├── dialogue/            # 对话智能模块 ⭐ 新增
-│   │   ├── intent_analyzer.py    # 意图分析器
-│   │   ├── state_machine.py      # 对话状态机
-│   │   ├── context_enhancer.py   # 上下文增强器
-│   │   ├── proactive_engine.py   # 主动对话引擎
-│   │   └── dialogue_state.py     # 状态定义
-│   ├── memory/              # 记忆系统
-│   │   ├── context.py       # 短期记忆（内存缓存）
-│   │   ├── database.py      # 长期记忆（SQLite）
-│   │   ├── vector_store.py  # 语义记忆（Chroma）
-│   │   ├── memory_manager.py # 统一管理器
-│   │   └── member_db.py     # 群友信息数据库
-│   ├── plugins/             # 功能插件
-│   │   ├── chat_handler.py  # 聊天处理
-│   │   ├── bilibili.py      # B站链接解析
-│   │   ├── member_manager.py # 群友管理
-│   │   └── proactive_chat.py # 主动对话插件 ⭐ 新增
-│   ├── triggers/            # 触发器
-│   │   ├── keyword.py       # 关键词触发
-│   │   ├── name.py          # 名字触发
-│   │   ├── smart.py         # 智能触发
-│   │   └── scheduler.py     # 定时任务
-│   └── utils/               # 工具
-│       ├── config.py        # 配置管理
-│       ├── logger.py        # 日志系统
-│       ├── helpers.py       # 工具函数
-│       └── web_search.py    # 联网搜索
-│
-├── data/                     # 数据目录
-│   ├── bot.db               # SQLite数据库
-│   ├── chroma/              # 向量数据库
-│   └── logs/                # 日志文件
-│
-├── docs/                     # 文档
-│   ├── DEPLOYMENT.md        # 部署文档
-│   ├── WEB_SEARCH.md        # 搜索功能文档
-│   └── VECTOR_MEMORY.md     # 向量记忆文档
-│
-├── napcat/                   # NapCat（QQ协议）
-│
-├── scripts/                  # 辅助脚本 ⭐
-│   ├── test_features.bat    # 功能测试
-│   ├── check_config.bat     # 配置检查
-│   ├── toggle_features.bat  # 功能开关
-│   ├── clean_data.bat       # 数据清理
-│   └── README.md            # 脚本说明
-│
-├── install.bat              # 安装脚本
-├── start_all.bat            # 一键启动
-├── start_bot.bat            # 启动机器人
-├── start_napcat.bat         # 启动NapCat
-├── stop_all.bat             # 停止所有
-└── requirements.txt         # Python依赖
+├── config/              # 配置文件
+├── data/                # 数据文件（数据库、日志）
+├── src/                 # 源代码
+│   ├── ai/             # AI 相关
+│   ├── memory/         # 记忆系统
+│   ├── plugins/        # 插件
+│   ├── triggers/       # 触发器
+│   └── utils/          # 工具函数
+├── web/                 # Web 管理界面
+│   ├── static/         # 静态资源
+│   ├── templates/      # HTML 模板
+│   └── app.py          # Flask 应用
+├── napcat/             # NapCat 相关文件
+├── 启动.bat            # 一键启动脚本
+└── install.bat         # 安装脚本
 ```
 
-## 🎯 使用示例
+## ⚠️ 注意事项
 
-### 触发方式
+1. 需要 Python 3.11+
+2. 需要有效的 AI API Key（DeepSeek 或阿里云）
+3. 首次启动需要扫码登录 QQ
+4. Bot 只在配置的目标群中工作
 
-1. **@触发**：`@沉舟 你好`
-2. **名字触发**：`舟舟在吗`
-3. **关键词触发**：`帮助`、`功能`、`/help`
-4. **智能触发**：机器人自动判断是否回复
+## 📝 更新日志
 
-### 固定回复
-
-- 发送 `帮助` 或 `/help` → 显示功能列表
-- 发送 `功能` → 显示详细功能
-
-### 群友管理命令（管理员）
-
-**设置生日**：
-- 群里：`/生日 @用户 12-25`
-- 私聊：`/生日 QQ号 12-25`
-
-**设置备注**（私聊）：
-- `/备注 QQ号 喜欢摄影，经常分享风景照`
-
-**设置昵称**：
-- 群里：`/昵称 @用户 秋雪`
-- 私聊：`/昵称 QQ号 秋雪`
-
-**查询信息**：
-- 群里：`/查询 @用户`（显示基础信息）
-- 私聊：`/查询 QQ号`（显示完整信息含生日备注）
-
-**活跃度统计**：
-- `/统计`（显示发言排行榜）
-
-### 语义记忆示例
-
-```
-用户A（一周前）："我喜欢吃火锅"
-用户B（今天）："推荐个餐厅"
-机器人：搜索记忆 → "记得有人说喜欢火锅，推荐海底捞"
-```
-
-## ⚙️ 配置说明
-
-### 记忆系统配置
-
-```yaml
-conversation:
-  max_messages: 30          # 短期记忆消息数
-  timeout_minutes: 30       # 超时时间
-  cache_size: 10            # 缓存会话数
-
-memory:
-  vector_db:
-    enabled: true           # 是否启用向量数据库
-    search_results: 5       # 搜索返回结果数
-    similarity_threshold: 0.5  # 相似度阈值
-```
-
-### 对话智能配置（新增）
-
-```yaml
-dialogue_intelligence:
-  # 意图分析
-  intent:
-    enabled: true
-    counter_question:
-      enabled: true         # 反问检测
-      stack_size: 3         # 保留最近几个问题
-    sarcasm_detection:
-      enabled: true         # 讽刺识别
-      threshold: 0.6        # 置信度阈值
-    topic_tracking:
-      enabled: true         # 话题追踪
-      switch_threshold: 3   # 几条不相关消息后切换
-  
-  # 对话状态机
-  state_machine:
-    enabled: true           # 是否启用状态机
-    state_prompts: true     # 状态感知prompt
-  
-  # 主动对话
-  proactive:
-    enabled: true           # 是否启用主动对话
-    cold_detection:
-      enabled: true
-      thresholds:
-        mild: 300           # 5分钟
-        moderate: 600       # 10分钟
-        severe: 1200        # 20分钟
-    interject:
-      cooldown: 600         # 冷却时间（秒）
-      max_recent_messages: 3  # 1小时最多主动几次
-```
-
-### 群友管理配置
-
-```yaml
-member_management:
-  auto_collect: true        # 自动收集群友信息
-  birthday_reminder: true   # 生日提醒
-  reminder_time: "09:00"    # 提醒时间
-  leave_notification: true  # 退群通知
-  save_avatar: true         # 保存头像
-```
-
-### 功能开关
-
-```yaml
-features:
-  mention_reply: true       # @回复
-  keyword_reply: true       # 关键词回复
-  name_reply: true          # 名字触发
-  smart_reply: true         # 智能判断
-  auto_chat: true           # 定时消息
-  bilibili_parse: true      # B站链接解析
-```
-
-## 🔧 常见问题
-
-### Q1: 如何获取API密钥？
-
-- **DeepSeek**: https://platform.deepseek.com/
-- **阿里云**: https://dashscope.aliyuncs.com/
-
-### Q2: 机器人不回复？
-
-1. 检查 NapCat 是否连接成功
-2. 查看日志：`data/logs/bot-*.log`
-3. 确认配置文件中的QQ号和群号正确
-
-### Q3: 向量数据库初始化失败？
-
-检查 `config/.env` 中的 `DASHSCOPE_API_KEY` 是否配置
-
-### Q4: 如何关闭向量数据库？
-
-修改 `config/config.yaml`：
-```yaml
-memory:
-  vector_db:
-    enabled: false
-```
-
-### Q5: 如何清空向量数据库？
-
-删除 `data/chroma` 目录或运行 `clean_data.bat`
-
-### Q6: 如何测试对话智能功能？
-
-运行 `test_features.bat` 进行功能测试
-
-### Q7: 如何开关对话智能功能？
-
-运行 `toggle_features.bat` 或手动编辑 `config/config.yaml`
-
-### Q8: 主动对话太频繁怎么办？
-
-调整配置：
-```yaml
-dialogue_intelligence:
-  proactive:
-    cold_detection:
-      thresholds:
-        mild: 600  # 改为10分钟
-    interject:
-      cooldown: 1200  # 改为20分钟冷却
-```
-
-## 📊 性能说明
-
-- **响应速度**：短期记忆 5ms，向量搜索 200-500ms
-- **内存占用**：约 200-500MB
-- **磁盘占用**：1000条消息约 6MB（向量库）
-
-## 📝 开发计划
-
-- [x] 三层记忆系统
-- [x] 联网搜索
-- [x] 向量语义记忆
-- [x] 对话智能增强（意图分析、状态机、主动对话）
-- [ ] 图片收发
-- [ ] 语音识别
-- [ ] 多群支持
-- [ ] Web管理界面
-- [ ] 氛围分析器
-- [ ] 情感记忆系统
+### v2.0.0 (2026-02-18)
+- ✨ 新增 Web 管理界面
+- ✨ 支持完全自定义人设
+- ✨ 增强智能触发器（上下文理解）
+- ✨ 新增群友管理功能
+- 🎨 优化界面设计
+- 🐛 修复连续对话检测
 
 ## 📄 许可证
 

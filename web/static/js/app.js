@@ -15,11 +15,31 @@ createApp({
                 bot: {
                     qq_number: '',
                     admin_qq: '',
-                    target_group: ''
+                    target_group: '',
+                    admin_name: '',
+                    admin_relationship: '',
+                    admin_description: ''
                 },
                 personality: {
                     name: '',
-                    nickname: ''
+                    nickname: '',
+                    background: '',
+                    appearance: {
+                        height: '',
+                        hair: '',
+                        features: '',
+                        aura: ''
+                    },
+                    character: {
+                        core: '',
+                        traits: []
+                    },
+                    speaking_style: {
+                        tone: '',
+                        manner: '',
+                        response: '',
+                        emoji_usage: ''
+                    }
                 },
                 features: {
                     mention_reply: true,
@@ -34,6 +54,7 @@ createApp({
                     temperature: 0.7
                 }
             },
+            personalityTraits: '',  // 用于编辑的文本形式
             env: {
                 DEEPSEEK_API_KEY: '',
                 DASHSCOPE_API_KEY: ''
@@ -49,7 +70,9 @@ createApp({
             members: [],
             socket: null,
             autoScroll: true,
-            statusInterval: null
+            statusInterval: null,
+            editingMember: null,  // 当前正在编辑的群友QQ号
+            editingMemberData: {}  // 编辑中的群友数据
         }
     },
     methods: {
@@ -115,13 +138,40 @@ createApp({
                 const res = await fetch('/api/config');
                 const data = await res.json();
                 if (data.success) {
-                    this.config = data.config;
+                    // 深度合并配置，确保所有字段都存在
+                    this.config = this.mergeConfig(this.config, data.config);
                     this.env = data.env;
+                    // 将traits数组转换为文本
+                    if (this.config.personality.character && this.config.personality.character.traits) {
+                        this.personalityTraits = this.config.personality.character.traits.join('\n');
+                    }
                     this.showNotification('配置已加载', 'success');
                 }
             } catch (error) {
                 this.showNotification('加载配置失败: ' + error.message, 'error');
             }
+        },
+        
+        // 深度合并配置对象
+        mergeConfig(target, source) {
+            const result = { ...target };
+            for (const key in source) {
+                if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                    result[key] = this.mergeConfig(result[key] || {}, source[key]);
+                } else {
+                    result[key] = source[key];
+                }
+            }
+            return result;
+        },
+        
+        // 更新性格特质
+        updateTraits() {
+            // 将文本转换为数组
+            this.config.personality.character.traits = this.personalityTraits
+                .split('\n')
+                .map(t => t.trim())
+                .filter(t => t.length > 0);
         },
         
         async saveConfig() {
@@ -169,6 +219,49 @@ createApp({
             } catch (error) {
                 console.error('加载群友列表失败:', error);
             }
+        },
+        
+        // 开始编辑群友
+        startEditMember(member) {
+            this.editingMember = member.qq;
+            this.editingMemberData = {
+                qq: member.qq,
+                qq_name: member.qq_name || '',
+                group_card: member.group_card || '',
+                nickname: member.nickname || '',
+                birthday: member.birthday || '',
+                notes: member.notes || '',
+                avatar_url: member.avatar_url || '',
+                is_active: member.is_active !== undefined ? member.is_active : 1
+            };
+        },
+        
+        // 保存群友信息
+        async saveMember() {
+            try {
+                const res = await fetch(`/api/members/${this.editingMemberData.qq}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.editingMemberData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.showNotification('保存成功', 'success');
+                    this.editingMember = null;
+                    this.editingMemberData = {};
+                    await this.loadMembers();  // 重新加载列表
+                } else {
+                    this.showNotification('保存失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                this.showNotification('保存失败: ' + error.message, 'error');
+            }
+        },
+        
+        // 取消编辑
+        cancelEdit() {
+            this.editingMember = null;
+            this.editingMemberData = {};
         },
         
         // 日志管理
@@ -255,6 +348,30 @@ createApp({
                     document.body.removeChild(notification);
                 }, 300);
             }, 3000);
+        },
+        
+        // 格式化日期
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            
+            if (days === 0) {
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                if (hours === 0) {
+                    const minutes = Math.floor(diff / (1000 * 60));
+                    return minutes === 0 ? '刚刚' : `${minutes}分钟前`;
+                }
+                return `${hours}小时前`;
+            } else if (days === 1) {
+                return '昨天';
+            } else if (days < 7) {
+                return `${days}天前`;
+            } else {
+                return date.toLocaleDateString('zh-CN');
+            }
         }
     },
     

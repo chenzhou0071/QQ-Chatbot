@@ -46,7 +46,7 @@
                     <div class="status-panel">
                         <div class="status-indicator">
                             <span class="status-dot" :class="{running: botStatus.running}"></span>
-                            <span class="status-text">{{ botStatus.running ? '运行中' : '未运行' }}</span>
+                            <span class="status-text" v-text="botStatus.running ? '运行中' : '未运行'"></span>
                         </div>
                         <div class="control-buttons">
                             <button @click="startBot" :disabled="botStatus.running" class="btn-success">启动</button>
@@ -57,19 +57,19 @@
                     <div v-if="botStatus.running" class="status-details">
                         <div class="status-item">
                             <span class="label">QQ号:</span>
-                            <span class="value">{{ config.bot?.qq_number || '-' }}</span>
+                            <span class="value" v-text="config.bot && config.bot.qq_number || '-'"></span>
                         </div>
                         <div class="status-item">
                             <span class="label">运行时间:</span>
-                            <span class="value">{{ botStatus.uptime || '-' }}</span>
+                            <span class="value" v-text="botStatus.uptime || '-'"></span>
                         </div>
                         <div class="status-item">
                             <span class="label">内存占用:</span>
-                            <span class="value">{{ botStatus.memory_mb }} MB</span>
+                            <span class="value" v-text="botStatus.memory_mb + ' MB'"></span>
                         </div>
                         <div class="status-item">
                             <span class="label">CPU:</span>
-                            <span class="value">{{ botStatus.cpu_percent }}%</span>
+                            <span class="value" v-text="botStatus.cpu_percent + '%'"></span>
                         </div>
                     </div>
                 </div>
@@ -79,19 +79,19 @@
                     <h3>📊 今日统计</h3>
                     <div class="stats-grid">
                         <div class="stat-item">
-                            <div class="stat-value">{{ stats.messages_received }}</div>
+                            <div class="stat-value" v-text="stats.messages_received"></div>
                             <div class="stat-label">收到消息</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value">{{ stats.replies_sent }}</div>
+                            <div class="stat-value" v-text="stats.replies_sent"></div>
                             <div class="stat-label">回复次数</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value">{{ stats.proactive_messages }}</div>
+                            <div class="stat-value" v-text="stats.proactive_messages"></div>
                             <div class="stat-label">主动发言</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value">{{ (stats.trigger_rate * 100).toFixed(0) }}%</div>
+                            <div class="stat-value" v-text="(stats.trigger_rate * 100).toFixed(0) + '%'"></div>
                             <div class="stat-label">触发率</div>
                         </div>
                     </div>
@@ -102,8 +102,8 @@
                     <h3>🔥 最近活动</h3>
                     <div class="log-preview">
                         <div v-for="log in recentLogs.slice(-10)" :key="log.timestamp" class="log-line">
-                            <span class="log-time">{{ log.timestamp }}</span>
-                            <span class="log-message">{{ log.message }}</span>
+                            <span class="log-time" v-text="log.timestamp"></span>
+                            <span class="log-message" v-text="log.message"></span>
                         </div>
                         <div v-if="recentLogs.length === 0" class="empty-state">
                             暂无日志
@@ -120,15 +120,34 @@
                     <h3>🤖 基础配置</h3>
                     <div class="form-group">
                         <label>Bot QQ号</label>
-                        <input v-model="config.bot.qq_number" type="text" class="form-control">
+                        <input v-model="config.bot.qq_number" type="text" class="form-control" placeholder="Bot的QQ号">
                     </div>
                     <div class="form-group">
                         <label>管理员QQ</label>
-                        <input v-model="config.bot.admin_qq" type="text" class="form-control">
+                        <input v-model="config.bot.admin_qq" type="text" class="form-control" placeholder="管理员的QQ号">
                     </div>
                     <div class="form-group">
                         <label>目标群号</label>
-                        <input v-model="config.bot.target_group" type="text" class="form-control">
+                        <input v-model="config.bot.target_group" type="text" class="form-control" placeholder="Bot工作的群号">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>👤 管理员关系设定</h3>
+                    <div class="form-group">
+                        <label>管理员名字</label>
+                        <input v-model="config.bot.admin_name" type="text" class="form-control" placeholder="例如：栖云">
+                        <small class="form-hint">Bot会用这个名字称呼管理员</small>
+                    </div>
+                    <div class="form-group">
+                        <label>与管理员的关系</label>
+                        <input v-model="config.bot.admin_relationship" type="text" class="form-control" placeholder="例如：收养你、照顾你的人">
+                        <small class="form-hint">简短描述你和管理员的关系</small>
+                    </div>
+                    <div class="form-group">
+                        <label>管理员详细描述</label>
+                        <textarea v-model="config.bot.admin_description" class="form-control" rows="3" placeholder="例如：管理员是女生，名叫栖云，是收养你、照顾你的人。你很珍惜管理员给你的这个家。"></textarea>
+                        <small class="form-hint">详细描述管理员的信息和你对管理员的感情</small>
                     </div>
                 </div>
 
@@ -143,7 +162,7 @@
                         <input v-model="env.DASHSCOPE_API_KEY" type="password" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label>温度参数 ({{ config.ai?.temperature || 0.7 }})</label>
+                        <label>温度参数 (<span v-text="config.ai && config.ai.temperature || 0.7"></span>)</label>
                         <input v-model.number="config.ai.temperature" type="range" min="0" max="1" step="0.1" class="form-range">
                     </div>
                 </div>
@@ -175,20 +194,76 @@
                         </label>
                     </div>
                     <div class="form-group">
-                        <label>触发概率 ({{ (config.smart_reply?.trigger_rate * 100 || 50).toFixed(0) }}%)</label>
+                        <label>触发概率 (<span v-text="((config.smart_reply && config.smart_reply.trigger_rate || 0.5) * 100).toFixed(0) + '%'"></span>)</label>
                         <input v-model.number="config.smart_reply.trigger_rate" type="range" min="0" max="1" step="0.05" class="form-range">
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>🎭 人设配置</h3>
+                    <h3>🎭 基本信息</h3>
                     <div class="form-group">
                         <label>名字</label>
-                        <input v-model="config.personality.name" type="text" class="form-control">
+                        <input v-model="config.personality.name" type="text" class="form-control" placeholder="例如：沉舟">
                     </div>
                     <div class="form-group">
                         <label>昵称</label>
-                        <input v-model="config.personality.nickname" type="text" class="form-control">
+                        <input v-model="config.personality.nickname" type="text" class="form-control" placeholder="例如：舟舟">
+                    </div>
+                    <div class="form-group">
+                        <label>背景故事</label>
+                        <textarea v-model="config.personality.background" class="form-control" rows="4" placeholder="描述角色的背景、经历、与管理员的关系等..."></textarea>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>👤 外貌特征</h3>
+                    <div class="form-group">
+                        <label>身高</label>
+                        <input v-model="config.personality.appearance.height" type="text" class="form-control" placeholder="例如：165cm">
+                    </div>
+                    <div class="form-group">
+                        <label>发型</label>
+                        <input v-model="config.personality.appearance.hair" type="text" class="form-control" placeholder="例如：利落的黑色短发">
+                    </div>
+                    <div class="form-group">
+                        <label>五官特征</label>
+                        <input v-model="config.personality.appearance.features" type="text" class="form-control" placeholder="例如：五官清秀柔和">
+                    </div>
+                    <div class="form-group">
+                        <label>气质氛围</label>
+                        <input v-model="config.personality.appearance.aura" type="text" class="form-control" placeholder="例如：干净内敛">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>💭 性格设定</h3>
+                    <div class="form-group">
+                        <label>核心性格</label>
+                        <input v-model="config.personality.character.core" type="text" class="form-control" placeholder="例如：腼腆害羞，慢热内敛">
+                    </div>
+                    <div class="form-group">
+                        <label>性格特质（每行一个）</label>
+                        <textarea v-model="personalityTraits" @input="updateTraits" class="form-control" rows="6" placeholder="例如：&#10;语气软糯轻柔&#10;说话略带拘谨&#10;偶尔有点小怯生"></textarea>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>💬 说话风格</h3>
+                    <div class="form-group">
+                        <label>语气</label>
+                        <input v-model="config.personality.speaking_style.tone" type="text" class="form-control" placeholder="例如：软糯、轻柔、温和">
+                    </div>
+                    <div class="form-group">
+                        <label>说话方式</label>
+                        <input v-model="config.personality.speaking_style.manner" type="text" class="form-control" placeholder="例如：略带拘谨、有点害羞">
+                    </div>
+                    <div class="form-group">
+                        <label>回应风格</label>
+                        <input v-model="config.personality.speaking_style.response" type="text" class="form-control" placeholder="例如：简短、温柔、不过分热情">
+                    </div>
+                    <div class="form-group">
+                        <label>表情使用</label>
+                        <input v-model="config.personality.speaking_style.emoji_usage" type="text" class="form-control" placeholder="例如：适度使用，偏向可爱害羞类">
                     </div>
                 </div>
 
@@ -205,14 +280,13 @@
                 <div class="card">
                     <div class="log-controls">
                         <button @click="clearLogs" class="btn-secondary">清空</button>
-                        <button @click="toggleAutoScroll" :class="{'btn-primary': autoScroll, 'btn-secondary': !autoScroll}">
-                            {{ autoScroll ? '自动滚动: 开' : '自动滚动: 关' }}
+                        <button @click="toggleAutoScroll" :class="{'btn-primary': autoScroll, 'btn-secondary': !autoScroll}" v-text="autoScroll ? '自动滚动: 开' : '自动滚动: 关'">
                         </button>
                     </div>
                     <div class="log-container" ref="logContainer">
                         <div v-for="log in logs" :key="log.timestamp + Math.random()" class="log-line">
-                            <span class="log-time">{{ log.timestamp }}</span>
-                            <span class="log-message">{{ log.message }}</span>
+                            <span class="log-time" v-text="log.timestamp"></span>
+                            <span class="log-message" v-text="log.message"></span>
                         </div>
                         <div v-if="logs.length === 0" class="empty-state">
                             等待日志...
@@ -228,17 +302,100 @@
                 <div class="card">
                     <div class="members-list">
                         <div v-for="member in members" :key="member.qq" class="member-item">
-                            <div class="member-info">
-                                <div class="member-name">
-                                    👤 {{ member.nickname || member.ai_nickname || member.qq }}
+                            <div v-if="editingMember !== member.qq" class="member-info">
+                                <div class="member-header">
+                                    <div class="member-name">
+                                        👤 <span v-text="member.nickname || member.ai_nickname || member.qq"></span>
+                                        <span v-if="!member.is_active" class="member-badge inactive">已退群</span>
+                                    </div>
+                                    <button @click="startEditMember(member)" class="btn-edit">✏️ 编辑</button>
                                 </div>
                                 <div class="member-details">
-                                    <span>QQ: {{ member.qq }}</span>
-                                    <span v-if="member.birthday">生日: {{ member.birthday }} 🎂</span>
-                                    <span>消息数: {{ member.message_count }}</span>
+                                    <div class="detail-row">
+                                        <span class="detail-label">QQ号:</span>
+                                        <span v-text="member.qq"></span>
+                                    </div>
+                                    <div class="detail-row" v-if="member.qq_name">
+                                        <span class="detail-label">QQ昵称:</span>
+                                        <span v-text="member.qq_name"></span>
+                                    </div>
+                                    <div class="detail-row" v-if="member.group_card">
+                                        <span class="detail-label">群名片:</span>
+                                        <span v-text="member.group_card"></span>
+                                    </div>
+                                    <div class="detail-row" v-if="member.birthday">
+                                        <span class="detail-label">生日:</span>
+                                        <span v-text="member.birthday"></span> 🎂
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">消息数:</span>
+                                        <span v-text="member.message_count"></span>
+                                    </div>
+                                    <div class="detail-row" v-if="member.last_active">
+                                        <span class="detail-label">最后活跃:</span>
+                                        <span v-text="formatDate(member.last_active)"></span>
+                                    </div>
                                 </div>
                                 <div v-if="member.notes" class="member-notes">
-                                    备注: {{ member.notes }}
+                                    💬 备注: <span v-text="member.notes"></span>
+                                </div>
+                            </div>
+                            
+                            <!-- 编辑模式 -->
+                            <div v-else class="member-edit">
+                                <h4>编辑群友信息</h4>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>QQ号 (不可修改)</label>
+                                        <input v-model="editingMemberData.qq" type="text" class="form-control" disabled>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>状态</label>
+                                        <select v-model="editingMemberData.is_active" class="form-control">
+                                            <option :value="1">活跃</option>
+                                            <option :value="0">已退群</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>QQ昵称</label>
+                                        <input v-model="editingMemberData.qq_name" type="text" class="form-control" placeholder="QQ上的昵称">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>群名片</label>
+                                        <input v-model="editingMemberData.group_card" type="text" class="form-control" placeholder="群内显示的名片">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>自定义昵称 (Bot记忆中的称呼)</label>
+                                    <input v-model="editingMemberData.nickname" type="text" class="form-control" placeholder="给这个人起个昵称">
+                                    <small class="form-hint">Bot会优先使用这个昵称来称呼对方</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>生日</label>
+                                    <input v-model="editingMemberData.birthday" type="text" placeholder="格式: MM-DD 或 YYYY-MM-DD" class="form-control">
+                                    <small class="form-hint">例如: 12-25 或 2000-12-25</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>备注信息</label>
+                                    <textarea v-model="editingMemberData.notes" class="form-control" rows="3" placeholder="记录关于这个人的特殊信息、喜好、性格等..."></textarea>
+                                    <small class="form-hint">这些信息会帮助Bot更好地与对方互动</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>头像URL (可选)</label>
+                                    <input v-model="editingMemberData.avatar_url" type="text" class="form-control" placeholder="https://...">
+                                </div>
+                                
+                                <div class="edit-actions">
+                                    <button @click="saveMember" class="btn-primary">💾 保存</button>
+                                    <button @click="cancelEdit" class="btn-secondary">❌ 取消</button>
                                 </div>
                             </div>
                         </div>

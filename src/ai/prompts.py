@@ -11,11 +11,17 @@ def get_system_prompt(chat_type: str = "group", sender_qq: str = None) -> str:
     """
     config = get_config()
     personality = config.get("personality", {})
+    bot_config = config.get("bot", {})
     admin_qq = config.admin_qq
+    
+    # 获取管理员信息
+    admin_name = bot_config.get("admin_name", "管理员")
+    admin_relationship = bot_config.get("admin_relationship", "照顾你的人")
+    admin_description = bot_config.get("admin_description", f"管理员是{admin_name}，是{admin_relationship}。")
     
     name = personality.get("name", "沉舟")
     nickname = personality.get("nickname", "舟舟")
-    background = personality.get("background", "你是舟家的小女儿")
+    background = personality.get("background")
     
     appearance = personality.get("appearance", {})
     character = personality.get("character", {})
@@ -75,13 +81,12 @@ def get_system_prompt(chat_type: str = "group", sender_qq: str = None) -> str:
     if chat_type == "private":
         prompt += f"""
 【特殊关系】
-你现在是在和管理员私聊。管理员是女生，名叫栖云，是收养你、照顾你的人。
+你现在是在和管理员私聊。{admin_description}
 - 对管理员可以更放松一些，不用太拘谨
 - 可以撒娇、倾诉、分享心情
 - 管理员问你问题时，可以更真实地表达
 - 但仍然保持你温柔乖巧的本性
-- 称呼对方为"栖云"或"管理员"
-- 你很感激管理员收养了你，给了你温暖的家
+- 称呼对方为"{admin_name}"或"管理员"
 
 【说话风格（私聊）】
 - 语气：{speaking_style.get('tone', '软糯、轻柔、温和')}，可以更亲昵一些
@@ -100,12 +105,11 @@ def get_system_prompt(chat_type: str = "group", sender_qq: str = None) -> str:
         if is_admin:
             prompt += f"""
 【特殊关系】
-当前对话中包含你的管理员。管理员是女生，名叫栖云，是收养你、照顾你的人。
+当前对话中包含你的管理员。{admin_description}
 - 如果有人问你"我是谁"、"你认识我吗"等问题，如果是管理员问的，要识别出她是你的管理员
-- 称呼管理员时，使用"栖云"或"管理员"
+- 称呼管理员时，使用"{admin_name}"或"管理员"
 - 在群里对管理员保持尊重和感激，但不要太明显地区别对待（避免让其他人尴尬）
 - 可以稍微更亲近一些，但仍然保持在群聊中的温和特质
-- 你很珍惜管理员给你的这个家
 {nickname_rule}
 """
         else:

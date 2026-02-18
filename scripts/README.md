@@ -1,127 +1,27 @@
-# 脚本工具
+# 实用脚本
 
-本目录包含项目的辅助脚本工具。
+这个目录包含一些实用的维护脚本。
 
-## 📁 脚本列表
+## 可用脚本
 
-### test_features.bat
-**功能**：测试对话智能功能是否正常
+### 数据管理
 
-**使用**：
-```bash
-cd scripts
-test_features.bat
-```
+- `clear_memory.bat` / `clear_memory.py` - 清空记忆数据库（保留群友信息）
+- `clean_data.bat` - 清理所有数据（包括日志、数据库）
 
-**测试内容**：
-- 意图分析器
-- 对话状态机
-- 上下文增强器
-- 主动对话引擎
+### 配置管理
 
----
+- `check_config.bat` - 检查配置文件是否正确
 
-### check_config.bat
-**功能**：检查配置文件，显示当前启用的功能
+### 日志查看
 
-**使用**：
-```bash
-cd scripts
-check_config.bat
-```
+- `watch_log.bat` - 实时查看 Bot 日志
 
-**显示内容**：
-- 基本配置（QQ号、群号）
-- 对话智能配置
-- AI配置
-- 记忆配置
+## 使用方法
 
----
+直接双击运行对应的 `.bat` 文件即可。
 
-### toggle_features.bat
-**功能**：交互式功能开关菜单
+## 注意事项
 
-**使用**：
-```bash
-cd scripts
-toggle_features.bat
-```
-
-**功能选项**：
-1. 启用所有对话智能功能
-2. 禁用所有对话智能功能
-3. 仅启用意图分析
-4. 仅启用对话状态机
-5. 仅启用主动对话
-6. 查看当前配置
-
----
-
-### clean_data.bat
-**功能**：清理数据文件（保留配置）
-
-**使用**：
-```bash
-cd scripts
-clean_data.bat
-```
-
-**清理内容**：
-- 聊天记录数据库 (data\bot.db)
-- 向量数据库 (data\chroma)
-- 日志文件 (data\logs)
-
-**注意**：配置文件和代码不会被删除
-
----
-
-### clear_memory.bat
-**功能**：清空机器人记忆（保留群友数据库）
-
-**使用**：
-```bash
-cd scripts
-clear_memory.bat
-```
-
-**清空内容**：
-- 对话上下文 (conversation_context 表)
-- 聊天记录 (chat_log 表)
-- 向量记忆 (data\chroma 目录)
-
-**保留内容**：
-- 群友信息 (group_member 表)
-- 群友昵称、生日、备注等
-
-**使用场景**：
-- 想让机器人"忘记"之前的对话
-- 但保留群友的个人信息
-- 重新开始对话但不丢失群友数据
-
----
-
-## 💡 使用建议
-
-### 首次使用
-1. 运行 `test_features.bat` 确认功能正常
-2. 运行 `check_config.bat` 查看配置
-
-### 调试问题
-1. 运行 `check_config.bat` 检查配置
-2. 查看日志文件 `data\logs\bot-*.log`
-
-### 功能调整
-1. 运行 `toggle_features.bat` 快速开关功能
-2. 或手动编辑 `config\config.yaml`
-
-### 重新开始
-1. 运行 `clean_data.bat` 清理数据
-2. 重新启动机器人
-
----
-
-## 🔗 相关文档
-
-- [主文档](../README.md)
-- [对话智能文档](../docs/DIALOGUE_INTELLIGENCE.md)
-- [配置示例](../config/config.yaml.example)
+- 清理数据操作不可恢复，请谨慎使用
+- 建议在清理前备份重要数据

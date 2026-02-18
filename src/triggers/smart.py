@@ -150,8 +150,39 @@ async def handle_smart_reply(bot: Bot, event: GroupMessageEvent) -> None:
     if is_continuous:
         logger.info("[群] 连续对话，直接回复")
     else:
-        # 调用AI判断是否需要回复
-        prompt: str = get_smart_reply_prompt(message_text)
+        # 获取最近的对话历史作为上下文
+        recent_messages = memory_manager.get_recent_messages("group", limit=5)
+        context_text = ""
+        if recent_messages:
+            context_text = "\n最近的对话:\n"
+            for msg in recent_messages[-5:]:  # 最多5条
+                role = "Bot" if msg.get("role") == "assistant" else msg.get("sender_name", "用户")
+                content = msg.get("content", "")
+                context_text += f"{role}: {content}\n"
+        
+        # 调用AI判断是否需要回复（带上下文）
+        prompt = f"""判断Bot是否需要回复这条群消息。
+
+你是一个温柔内敛的女孩（名叫{bot_name}，昵称{bot_nickname}），偶尔会参与群聊。
+
+{context_text}
+当前消息: {message_text}
+
+判断标准：
+1. 如果消息是在和你对话、询问你、或期待你的回应 → 回复 "YES"
+2. 如果消息提到了你之前说过的话题 → 回复 "YES"
+3. 如果有人对你做亲密动作（摸头、抱抱、亲亲、戳戳等）→ 回复 "YES"
+4. 如果有人在回应你刚才说的话 → 回复 "YES"
+5. 如果群成员在聊一个有趣的话题，你也想说两句 → 可以回复 "YES"
+6. 如果消息很简短（如"哈哈"、"好的"、"嗯嗯"）且不是在回应你 → 回复 "NO"
+7. 如果是很私密的两人对话，不要打扰 → 回复 "NO"
+8. 如果话题你不太懂或不感兴趣，保持安静 → 回复 "NO"
+
+记住：你性格温和内敛，不要对所有消息都回复，但可以适当参与群聊。
+
+只回复 "YES" 或 "NO"，不要有其他内容。
+"""
+        
         decision: Optional[str] = ai_client.simple_chat(prompt)
         
         if not decision or "YES" not in decision.upper():

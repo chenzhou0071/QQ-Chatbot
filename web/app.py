@@ -103,10 +103,28 @@ class BotManager:
         """获取bot状态"""
         if self.process and self.running:
             try:
-                # 获取进程信息
+                # 获取Bot进程信息（不是Web服务器进程）
                 proc = psutil.Process(self.process.pid)
+                
+                # 获取进程及其所有子进程
+                children = proc.children(recursive=True)
+                
+                # 计算总内存（包括子进程）
                 memory_info = proc.memory_info()
+                total_memory = memory_info.rss
+                for child in children:
+                    try:
+                        total_memory += child.memory_info().rss
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+                
+                # 计算CPU使用率
                 cpu_percent = proc.cpu_percent(interval=0.1)
+                for child in children:
+                    try:
+                        cpu_percent += child.cpu_percent(interval=0.1)
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
                 
                 uptime = datetime.now() - self.start_time if self.start_time else timedelta(0)
                 
@@ -114,10 +132,11 @@ class BotManager:
                     'running': True,
                     'pid': self.process.pid,
                     'uptime': str(uptime).split('.')[0],  # 去掉微秒
-                    'memory_mb': round(memory_info.rss / 1024 / 1024, 2),
+                    'memory_mb': round(total_memory / 1024 / 1024, 2),
                     'cpu_percent': round(cpu_percent, 1)
                 }
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                print(f"获取进程信息失败: {e}")
                 self.running = False
                 self.process = None
                 return {'running': False}
@@ -190,11 +209,47 @@ def config():
     """配置管理"""
     if request.method == 'GET':
         try:
+            # 如果配置文件不存在，从example复制
+            if not CONFIG_PATH.exists():
+                example_path = BASE_DIR / 'config' / 'config.yaml.example'
+                if example_path.exists():
+                    import shutil
+                    shutil.copy(example_path, CONFIG_PATH)
+                    print(f"已从 {example_path} 创建配置文件")
+                else:
+                    # 如果example也不存在，返回空配置
+                    return jsonify({
+                        'success': True,
+                        'config': {
+                            'bot': {'qq_number': '', 'admin_qq': '', 'target_group': ''},
+                            'personality': {
+                                'name': '',
+                                'nickname': '',
+                                'background': '',
+                                'appearance': {'height': '', 'hair': '', 'features': '', 'aura': ''},
+                                'character': {'core': '', 'traits': []},
+                                'speaking_style': {'tone': '', 'manner': '', 'response': '', 'emoji_usage': ''}
+                            },
+                            'features': {},
+                            'ai': {}
+                        },
+                        'env': {}
+                    })
+            
             with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
                 config_data = yaml.safe_load(f)
             
             # 读取环境变量
             env_data = {}
+            
+            # 如果.env不存在，从.env.example复制
+            if not ENV_PATH.exists():
+                env_example_path = BASE_DIR / 'config' / '.env.example'
+                if env_example_path.exists():
+                    import shutil
+                    shutil.copy(env_example_path, ENV_PATH)
+                    print(f"已从 {env_example_path} 创建环境变量文件")
+            
             if ENV_PATH.exists():
                 with open(ENV_PATH, 'r', encoding='utf-8') as f:
                     for line in f:
@@ -217,11 +272,17 @@ def config():
             
             # 保存YAML配置
             if 'config' in data:
+                # 确保目录存在
+                CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+                
                 with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
                     yaml.dump(data['config'], f, allow_unicode=True, default_flow_style=False)
             
             # 保存环境变量
             if 'env' in data:
+                # 确保目录存在
+                ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
+                
                 with open(ENV_PATH, 'w', encoding='utf-8') as f:
                     for key, value in data['env'].items():
                         f.write(f"{key}={value}\n")
@@ -295,27 +356,67 @@ def get_members():
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT qq_id, nickname, ai_nickname, birthday, notes, message_count, last_seen_at
+            SELECT qq_id, qq_name, group_card, nickname, birthday, remark, 
+                   avatar_url, is_active, message_count, last_active
             FROM group_member
-            ORDER BY message_count DESC
+            ORDER BY is_active DESC, message_count DESC
         """)
         
         members = []
         for row in cursor.fetchall():
             members.append({
                 'qq': row[0],
-                'nickname': row[1],
-                'ai_nickname': row[2],
-                'birthday': row[3],
-                'notes': row[4],
-                'message_count': row[5],
-                'last_seen': row[6]
+                'qq_name': row[1],
+                'group_card': row[2],
+                'nickname': row[3],
+                'birthday': row[4],
+                'notes': row[5],
+                'avatar_url': row[6],
+                'is_active': row[7],
+                'message_count': row[8] or 0,
+                'last_active': row[9]
             })
         
         conn.close()
         return jsonify({'success': True, 'members': members})
     except Exception as e:
+        print(f"获取群友列表错误: {e}")
         return jsonify({'success': False, 'error': str(e), 'members': []})
+
+@app.route('/api/members/<qq_id>', methods=['PUT'])
+def update_member(qq_id):
+    """更新群友信息"""
+    try:
+        import sqlite3
+        data = request.json
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # 更新群友信息
+        cursor.execute("""
+            UPDATE group_member
+            SET qq_name = ?, group_card = ?, nickname = ?, birthday = ?, 
+                remark = ?, avatar_url = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE qq_id = ?
+        """, (
+            data.get('qq_name'),
+            data.get('group_card'),
+            data.get('nickname'),
+            data.get('birthday'),
+            data.get('notes'),
+            data.get('avatar_url'),
+            data.get('is_active', 1),
+            qq_id
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': '更新成功'})
+    except Exception as e:
+        print(f"更新群友信息错误: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 
 # ==================== WebSocket事件 ====================
